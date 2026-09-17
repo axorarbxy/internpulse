@@ -1,0 +1,1 @@
+const r=require('express').Router(),a=require('../middleware/authMiddleware'),z=require('../middleware/roleMiddleware'),c=require('../controllers/internshipController');r.get('/',c.all);r.get('/company/my',a,z('COMPANY'),c.mine);r.get('/:id',c.one);r.post('/',a,z('COMPANY'),c.create);r.put('/:id',a,z('COMPANY'),c.update);r.delete('/:id',a,z('COMPANY'),c.remove);module.exports=r;

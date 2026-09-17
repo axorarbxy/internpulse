@@ -1,0 +1,1 @@
+const r=require('express').Router(),a=require('../middleware/authMiddleware'),z=require('../middleware/roleMiddleware'),c=require('../controllers/companyController');r.get('/profile',a,z('COMPANY'),c.getProfile);r.put('/profile',a,z('COMPANY'),c.updateProfile);module.exports=r;

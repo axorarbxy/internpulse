@@ -1,0 +1,1 @@
+const r=require('express').Router(),a=require('../middleware/authMiddleware'),z=require('../middleware/roleMiddleware'),c=require('../controllers/studentController');r.get('/profile',a,z('STUDENT'),c.getProfile);r.put('/profile',a,z('STUDENT'),c.updateProfile);module.exports=r;

@@ -1,0 +1,1 @@
+const r=require('express').Router(),a=require('../middleware/authMiddleware'),z=require('../middleware/roleMiddleware'),c=require('../controllers/applicationController');r.post('/',a,z('STUDENT'),c.apply);r.get('/my',a,z('STUDENT'),c.my);r.get('/internship/:internshipId',a,z('COMPANY'),c.forInternship);r.put('/:id/status',a,z('COMPANY'),c.updateStatus);module.exports=r;
