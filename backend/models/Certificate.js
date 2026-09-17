@@ -1,0 +1,5 @@
+const pool=require('../config/db');
+const create=async(a,n,u)=>(await pool.query('INSERT INTO certificates(application_id,certificate_number,certificate_url,verified) VALUES($1,$2,$3,TRUE) RETURNING *',[a,n,u||null])).rows[0];
+const byStudent=async u=>(await pool.query(`SELECT cert.*,i.title,c.company_name FROM certificates cert JOIN applications a ON a.id=cert.application_id JOIN students s ON s.id=a.student_id JOIN internships i ON i.id=a.internship_id JOIN companies c ON c.id=i.company_id WHERE s.user_id=$1 ORDER BY cert.issued_date DESC`,[u])).rows;
+const verify=async n=>(await pool.query(`SELECT cert.id,cert.certificate_number,cert.certificate_url,cert.issued_date,cert.verified,i.title,c.company_name,u.name AS student_name FROM certificates cert JOIN applications a ON a.id=cert.application_id JOIN students s ON s.id=a.student_id JOIN users u ON u.id=s.user_id JOIN internships i ON i.id=a.internship_id JOIN companies c ON c.id=i.company_id WHERE cert.certificate_number=$1`,[n])).rows[0];
+module.exports={create,byStudent,verify};

@@ -1,0 +1,1 @@
+const r=require('express').Router(),a=require('../middleware/authMiddleware'),z=require('../middleware/roleMiddleware'),c=require('../controllers/certificateController');r.post('/',a,z('COMPANY'),c.create);r.get('/my',a,z('STUDENT'),c.my);r.get('/:certificateNumber/verify',c.verify);module.exports=r;

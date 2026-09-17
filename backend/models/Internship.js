@@ -1,0 +1,8 @@
+const pool=require('../config/db');
+const create=async(c,d)=>(await pool.query(`INSERT INTO internships(company_id,title,description,skills_required,location,stipend,duration_months,start_date,end_date,status) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,[c,d.title,d.description||null,d.skills_required||null,d.location||null,d.stipend||null,d.duration_months||null,d.start_date||null,d.end_date||null,d.status||'POSTED'])).rows[0];
+const all=async()=>(await pool.query(`SELECT i.*,c.company_name FROM internships i JOIN companies c ON c.id=i.company_id ORDER BY i.created_at DESC`)).rows;
+const one=async id=>(await pool.query(`SELECT i.*,c.company_name FROM internships i JOIN companies c ON c.id=i.company_id WHERE i.id=$1`,[id])).rows[0];
+const byCompany=async c=>(await pool.query('SELECT * FROM internships WHERE company_id=$1 ORDER BY created_at DESC',[c])).rows;
+const update=async(id,c,d)=>(await pool.query(`UPDATE internships SET title=COALESCE($1,title),description=COALESCE($2,description),skills_required=COALESCE($3,skills_required),location=COALESCE($4,location),stipend=COALESCE($5,stipend),duration_months=COALESCE($6,duration_months),start_date=COALESCE($7,start_date),end_date=COALESCE($8,end_date),status=COALESCE($9,status) WHERE id=$10 AND company_id=$11 RETURNING *`,[d.title||null,d.description||null,d.skills_required||null,d.location||null,d.stipend||null,d.duration_months||null,d.start_date||null,d.end_date||null,d.status||null,id,c])).rows[0];
+const remove=async(id,c)=>(await pool.query('DELETE FROM internships WHERE id=$1 AND company_id=$2 RETURNING id',[id,c])).rows[0];
+module.exports={create,all,one,byCompany,update,remove};
