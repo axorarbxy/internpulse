@@ -40,7 +40,9 @@ export default function NavigationProvider({ children }) {
   // Parse initial state from hash if present: e.g. #student/dashboard
   const parseHash = () => {
     const hash = window.location.hash.replace(/^#\/?/, '');
-    if (!hash) return { role: 'student', tab: 'dashboard' };
+    const storedUser = JSON.parse(window.localStorage.getItem('internpulse_user') || 'null');
+    const storedRole = storedUser?.role?.toLowerCase();
+    if (!hash) return { role: ['student', 'institution', 'company'].includes(storedRole) ? storedRole : 'student', tab: 'dashboard' };
     const parts = hash.split('/');
     const role = ['student', 'institution', 'company'].includes(parts[0]) ? parts[0] : 'student';
     const tab = parts[1] || 'dashboard';

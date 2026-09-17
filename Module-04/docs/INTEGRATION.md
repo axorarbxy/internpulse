@@ -64,12 +64,12 @@ never confused with real data during a demo.
 
 ## 5. Integration checklist
 
-- [ ] Module 1 authentication connected (shared `JWT_SECRET`, real login flow)
+- [x] Module 1 authentication connected (shared `JWT_SECRET`, real login flow)
 - [ ] Module 1 internship API connected (`MODULE1_MODE=live`)
-- [ ] Module 2 notification UI connected (`<NotificationBell />` mounted)
-- [ ] Module 2 messaging UI connected (`<ChatLayout />` mounted, routes merged)
+- [x] Module 2 notification UI connected (`<NotificationBell />` mounted)
+- [x] Module 2 messaging UI connected (`<ChatLayout />` mounted, routes merged)
 - [ ] Module 3 document verification connected (real POST to `/api/document-verifications`)
-- [ ] Socket.IO connected (`SocketProvider` wraps the authenticated app)
+- [x] Socket.IO connected (`SocketProvider` wraps the authenticated app)
 - [ ] Encryption verified (two real accounts can exchange readable messages, server DB shows only ciphertext)
 - [ ] Certificate generation verified
 - [ ] QR verification verified (scanning resolves to `/verify/:certificateId` and returns VALID)

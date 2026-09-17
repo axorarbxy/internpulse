@@ -11,6 +11,7 @@ import {
   IconBuilding,
   IconUsers,
   IconCheckCircle,
+  IconBell,
 } from './Icons';
 
 export default function Sidebar() {
@@ -26,12 +27,16 @@ export default function Sidebar() {
     { id: 'resume', label: 'Resume Builder', icon: IconFileText },
     { id: 'certificates', label: 'Certificates', icon: IconAward, badge: '2 Verified' },
     { id: 'recommendations', label: 'Recommendations', icon: IconSparkles, badge: 'New' },
+    { id: 'messages', label: 'Messages', icon: IconFileText },
+    { id: 'notifications', label: 'Notifications', icon: IconBell },
   ];
 
   const institutionNav = [
     { id: 'dashboard', label: 'Institution Dashboard', icon: IconDashboard },
     { id: 'monitoring', label: 'Student Monitoring', icon: IconCheckCircle },
     { id: 'analytics', label: 'Institution Analytics', icon: IconAnalytics },
+    { id: 'messages', label: 'Messages', icon: IconFileText },
+    { id: 'notifications', label: 'Notifications', icon: IconBell },
   ];
 
   const companyNav = [
@@ -39,6 +44,8 @@ export default function Sidebar() {
     { id: 'manage', label: 'Manage Internships', icon: IconBriefcase },
     { id: 'applicants', label: 'Applicants', icon: IconUsers, badge: '4 New' },
     { id: 'progress', label: 'Internship Progress', icon: IconCheckCircle },
+    { id: 'messages', label: 'Messages', icon: IconFileText },
+    { id: 'notifications', label: 'Notifications', icon: IconBell },
   ];
 
   const currentNav =

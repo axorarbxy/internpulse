@@ -7,7 +7,7 @@ const router = express.Router();
 router.use(authenticate);
 
 // EXTERNAL INTEGRATION DEPENDENCY — intended caller is Module 3's service account
-router.post('/', requireRole('ADMIN', 'INSTITUTE'), controller.receive);
+router.post('/', requireRole('ADMIN', 'INSTITUTE', 'INSTITUTION'), controller.receive);
 router.get('/:documentId', controller.getOne);
 
 module.exports = router;

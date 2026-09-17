@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Smart Internship Management System — Module 1
 
 Complete PostgreSQL + Node.js/Express backend for Module 1.
@@ -29,7 +28,7 @@ Use returned token as `Authorization: Bearer <token>` for protected APIs.
 - Internships: `/api/internships`
 - Applications: `/api/applications`
 - Certificates: `/api/certificates`
-=======
+
 <div align="center">
 
 # 🌐 InternPulse
@@ -351,4 +350,3 @@ This project is licensed under the MIT License.
 **Built with ⚡ by the InternPulse team**
 
 </div>
->>>>>>> 3b8f813fe081bdd0bbd269e397fa0df759879ad7

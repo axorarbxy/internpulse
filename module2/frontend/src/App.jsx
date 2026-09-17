@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NavigationProvider, useNavigation } from './context';
 import DashboardLayout from './layouts/DashboardLayout';
 import {
@@ -17,15 +18,25 @@ import {
   Applicants,
   InternshipProgress,
 } from './pages';
+import AuthPage from './pages/AuthPage';
+import { getAuthToken } from './services/api';
+import { SocketProvider } from '../../../Module-04/frontend/src/context/SocketContext';
+import MessagesPage from '../../../Module-04/frontend/src/pages/Messages';
+import NotificationsPage from '../../../Module-04/frontend/src/pages/Notifications';
 import './App.css';
 
 function MainAppContent() {
   const { role, activeTab } = useNavigation();
+  const user = JSON.parse(window.localStorage.getItem('internpulse_user') || 'null');
 
   // Render view depending on active role and tab
   const renderContent = () => {
     if (role === 'student') {
       switch (activeTab) {
+        case 'messages':
+          return <MessagesPage currentUserId={String(user?.id || '')} />;
+        case 'notifications':
+          return <NotificationsPage />;
         case 'dashboard':
           return <StudentDashboard />;
         case 'browse':
@@ -49,6 +60,10 @@ function MainAppContent() {
 
     if (role === 'institution') {
       switch (activeTab) {
+        case 'messages':
+          return <MessagesPage currentUserId={String(user?.id || '')} />;
+        case 'notifications':
+          return <NotificationsPage />;
         case 'dashboard':
           return <InstitutionDashboard />;
         case 'monitoring':
@@ -62,6 +77,10 @@ function MainAppContent() {
 
     if (role === 'company') {
       switch (activeTab) {
+        case 'messages':
+          return <MessagesPage currentUserId={String(user?.id || '')} />;
+        case 'notifications':
+          return <NotificationsPage />;
         case 'dashboard':
           return <CompanyDashboard />;
         case 'manage':
@@ -82,9 +101,17 @@ function MainAppContent() {
 }
 
 export default function App() {
+  const [authenticated, setAuthenticated] = useState(Boolean(getAuthToken()));
+
+  if (!authenticated) {
+    return <AuthPage onAuthenticated={() => setAuthenticated(true)} />;
+  }
+
   return (
-    <NavigationProvider>
-      <MainAppContent />
-    </NavigationProvider>
+    <SocketProvider token={getAuthToken()}>
+      <NavigationProvider>
+        <MainAppContent />
+      </NavigationProvider>
+    </SocketProvider>
   );
 }

@@ -2,13 +2,13 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5004/api',
+  baseURL: import.meta.env.VITE_MODULE4_API_BASE_URL || '/api/realtime',
 });
 
 // Assumes Module 1's login flow stores a JWT the whole app shares.
 // Adjust the storage key to match Module 1/Module 2's actual auth implementation.
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('authToken');
+  const token = localStorage.getItem('internpulse_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
