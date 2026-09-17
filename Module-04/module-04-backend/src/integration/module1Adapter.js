@@ -6,8 +6,8 @@
 //   GET {MODULE1_BASE_URL}/internships/active
 //
 // While MODULE1_MODE=mock, this adapter returns seed data clearly marked as MOCK
-// so Module 4 can be developed/tested independently. Swap MODULE1_MODE=live and
-// implement the fetch calls once Module 1's real API is available.
+// so Module 4 can be developed/tested independently. In live mode it calls the
+// protected integration contract exposed by Module 1.
 const config = require('../config/env');
 const logger = require('../utils/logger');
 
@@ -32,18 +32,14 @@ async function getUser(userId) {
   if (config.module1Mode === 'mock') {
     return MOCK_USERS[userId] || { id: userId, name: `Unknown User (MOCK ${userId})`, role: 'UNKNOWN' };
   }
-  // LIVE MODE — implement real call once Module 1 exposes it:
-  // const res = await fetch(`${config.module1BaseUrl}/users/${userId}`);
-  // return res.json();
-  logger.warn('module1Adapter.getUser called in live mode without implementation');
-  throw new Error('Module 1 live integration not yet implemented');
+  return requestModule1(`/api/integration/users/${encodeURIComponent(userId)}`);
 }
 
 async function getInternship(internshipId) {
   if (config.module1Mode === 'mock') {
     return MOCK_INTERNSHIPS[internshipId] || null;
   }
-  throw new Error('Module 1 live integration not yet implemented');
+  return requestModule1(`/api/integration/internships/${encodeURIComponent(internshipId)}`);
 }
 
 async function getInternshipParticipants(internshipId) {
@@ -52,14 +48,37 @@ async function getInternshipParticipants(internshipId) {
     if (!internship) return [];
     return [internship.studentId, internship.companyId];
   }
-  throw new Error('Module 1 live integration not yet implemented');
+  const response = await requestModule1(`/api/integration/internships/${encodeURIComponent(internshipId)}/participants`);
+  return response.participants || [];
 }
 
 async function getActiveInternships() {
   if (config.module1Mode === 'mock') {
     return Object.values(MOCK_INTERNSHIPS).filter((i) => i.status === 'ACTIVE');
   }
-  throw new Error('Module 1 live integration not yet implemented');
+  const response = await requestModule1('/api/integration/internships/active');
+  return response.internships || [];
+}
+
+async function requestModule1(path) {
+  if (!config.module1BaseUrl) {
+    throw new Error('MODULE1_BASE_URL is required when MODULE1_MODE=live');
+  }
+
+  const response = await fetch(`${config.module1BaseUrl.replace(/\/$/, '')}${path}`, {
+    headers: {
+      Accept: 'application/json',
+      'X-Internal-Service-Key': config.module1ServiceToken,
+    },
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(payload.message || `Module 1 returned ${response.status}`);
+    error.statusCode = response.status;
+    logger.warn('Module 1 request failed', { path, status: response.status });
+    throw error;
+  }
+  return payload;
 }
 
 module.exports = { getUser, getInternship, getInternshipParticipants, getActiveInternships };

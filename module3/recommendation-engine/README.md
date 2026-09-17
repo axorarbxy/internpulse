@@ -18,6 +18,17 @@ To consume live company quality scores from the feedback-analysis service, set `
 $env:FEEDBACK_API_URL = "http://localhost:8004"
 ```
 
+To use real profiles and internships from the core PostgreSQL backend, set the
+core URL and the same internal service key configured as `INTERNAL_SERVICE_KEY`
+in the backend:
+
+```powershell
+$env:CORE_API_URL = "http://localhost:5000"
+$env:CORE_SERVICE_KEY = "replace_with_internal_service_key"
+```
+
+Without `CORE_API_URL`, the service uses its local seed repository for standalone development and tests.
+
 Open `http://localhost:8001/docs` for the interactive API documentation.
 
 ## Endpoints

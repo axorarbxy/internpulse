@@ -16,6 +16,7 @@ module.exports = {
   certificateSigningKey: required('CERTIFICATE_SIGNING_KEY'),
   module1Mode: required('MODULE1_MODE', 'mock'),
   module1BaseUrl: required('MODULE1_BASE_URL', ''),
+  module1ServiceToken: required('MODULE1_SERVICE_TOKEN', ''),
   module3Mode: required('MODULE3_MODE', 'mock'),
   module3BaseUrl: required('MODULE3_BASE_URL', ''),
   publicAppUrl: required('PUBLIC_APP_URL', 'http://localhost:5173'),

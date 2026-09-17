@@ -19,7 +19,7 @@ async function getOne(req, res, next) {
     if (!certificate) return fail(res, 404, 'Certificate not found', 'NOT_FOUND');
 
     const isOwner = certificate.studentId === req.user.id || certificate.companyId === req.user.id;
-    if (!isOwner && req.user.role !== 'ADMIN' && req.user.role !== 'INSTITUTE') {
+    if (!isOwner && req.user.role !== 'ADMIN' && !['INSTITUTE', 'INSTITUTION'].includes(req.user.role)) {
       return fail(res, 403, 'You are not authorized to view this certificate', 'FORBIDDEN');
     }
     return ok(res, certificate);
@@ -32,7 +32,7 @@ async function download(req, res, next) {
     if (!certificate) return fail(res, 404, 'Certificate not found', 'NOT_FOUND');
 
     const isOwner = certificate.studentId === req.user.id || certificate.companyId === req.user.id;
-    if (!isOwner && req.user.role !== 'ADMIN' && req.user.role !== 'INSTITUTE') {
+    if (!isOwner && req.user.role !== 'ADMIN' && !['INSTITUTE', 'INSTITUTION'].includes(req.user.role)) {
       return fail(res, 403, 'You are not authorized to download this certificate', 'FORBIDDEN');
     }
 

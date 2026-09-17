@@ -23,9 +23,14 @@ Set Module 4 to use the core API as its Module 1 base when its live adapter is i
 
 ```powershell
 $env:JWT_SECRET = "a-local-development-secret"
+$env:INTERNAL_SERVICE_KEY = "a-local-internal-service-key"
 $env:MODULE4_API_URL = "http://localhost:5004"
-$env:MODULE1_MODE = "mock"
+$env:MODULE1_MODE = "live"
+$env:MODULE1_BASE_URL = "http://localhost:5000"
+$env:MODULE1_SERVICE_TOKEN = $env:INTERNAL_SERVICE_KEY
 $env:MODULE3_MODE = "mock"
+$env:CORE_API_URL = "http://localhost:5000"
+$env:CORE_SERVICE_KEY = $env:INTERNAL_SERVICE_KEY
 ```
 
 The browser calls core APIs through `/api`. Module 4 REST calls use `/api/realtime`, which the core gateway forwards to port 5004. Socket.IO connects directly to `http://localhost:5004` using the same JWT.

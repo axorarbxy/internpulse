@@ -2,13 +2,14 @@ from fastapi import FastAPI, HTTPException, Query
 
 from app.models.schemas import ReindexResponse, RecommendationResponse, SkillGapResponse
 from app.services.engine import RecommendationEngine
+from app.services.repository import create_repository
 
 app = FastAPI(
     title="Skill Analysis & Internship Recommendation Engine",
     version="1.0.0",
     description="TF-IDF internship matching with skill-gap analysis and feedback-aware ranking.",
 )
-engine = RecommendationEngine()
+engine = RecommendationEngine(repository=create_repository())
 
 
 def get_profile(student_id: str):
