@@ -1,7 +1,9 @@
 const express=require('express'); const cors=require('cors');
 const auth=require('./routes/authRoutes'),student=require('./routes/studentRoutes'),company=require('./routes/companyRoutes'),institution=require('./routes/institutionRoutes'),internship=require('./routes/internshipRoutes'),application=require('./routes/applicationRoutes'),certificate=require('./routes/certificateRoutes');
+const intelligence=require('./routes/intelligenceRoutes');
 const app=express(); app.use(cors()); app.use(express.json());
 app.get('/',(req,res)=>res.json({message:'Smart Internship Management API is running'}));
 app.use('/api/auth',auth); app.use('/api/students',student); app.use('/api/companies',company); app.use('/api/institutions',institution); app.use('/api/internships',internship); app.use('/api/applications',application); app.use('/api/certificates',certificate);
+app.use('/api/intelligence',intelligence);
 app.use((req,res)=>res.status(404).json({message:'Route not found'}));
 module.exports=app;

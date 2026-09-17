@@ -29,4 +29,4 @@ Scores are signals, not authorship or fraud determinations. A score of `0.4` or 
 
 ## Integration points
 
-Replace the in-memory flag store with the Module 1 database adapter, feed Module 1 activity events into the activity endpoint, and send Module 4 verification mismatches to `/handoffs/document`. The activity analyzer's feature baseline can also be replaced with the Cybereye behavior-baselining pipeline while retaining the same advisory flag contract.
+Replace the in-memory flag store with the Module 1 database adapter, feed Module 1 activity events into the activity endpoint, and send Module 4 verification mismatches to `/handoffs/document`. Set `GRIEVANCE_API_URL` before startup to open an institution review case in grievance-system for each created flag. This handoff is best-effort and does not reject or block a submission. The activity analyzer's feature baseline can also be replaced with the Cybereye behavior-baselining pipeline while retaining the same advisory flag contract.

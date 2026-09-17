@@ -10,6 +10,7 @@ python -m venv venv
 .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 $env:LLM_API_KEY = "your_key_here" # optional
+$env:GRIEVANCE_API_URL = "http://localhost:8003" # optional
 uvicorn app.main:app --reload --port 8002
 ```
 
@@ -24,4 +25,4 @@ Open `http://localhost:8002/docs` for interactive API documentation.
 
 The service indexes ten FAQ entries with TF-IDF. A confident match returns the FAQ answer; when `LLM_API_KEY` is configured, the retrieved FAQ and recent conversation are sent to the OpenAI-compatible endpoint configured by `LLM_API_URL` and `LLM_MODEL`. If retrieval confidence is below the threshold, the query is escalated automatically.
 
-Session and grievance storage are in memory for this baseline. Replace `InMemorySessionStore` with Redis and `GrievanceEscalator` with the grievance service HTTP client for deployment.
+Session storage is in memory for this baseline. When `GRIEVANCE_API_URL` is set, automatic and manual escalations create records in grievance-system; if it is unavailable, the chatbot falls back to a local ticket.

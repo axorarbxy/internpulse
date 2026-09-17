@@ -15,6 +15,7 @@ from app.models.schemas import (
 from app.services.activity_anomaly import ActivityAnomalyDetector
 from app.services.content_analyzer import ContentAnalyzer
 from app.services.flag_manager import FlagManager
+from app.services.grievance_client import GrievanceReviewClient
 
 app = FastAPI(
     title="Fraud & Content-Authenticity Detection",
@@ -24,6 +25,7 @@ app = FastAPI(
 content_analyzer = ContentAnalyzer()
 activity_detector = ActivityAnomalyDetector()
 flags = FlagManager()
+grievance_client = GrievanceReviewClient()
 
 
 @app.get("/health")
@@ -44,6 +46,7 @@ def analyze_content(request: ContentAnalysisRequest) -> ContentAnalysisResponse:
             evidence=result.signals,
             advisory="Signals warrant institution review; this is not an authorship determination or rejection.",
         )
+        grievance_client.create_review_case(request.student_id, "Content authenticity review", result.signals)
         flag_id = flag.flag_id
     return ContentAnalysisResponse(
         submission_id=request.submission_id,
@@ -67,6 +70,11 @@ def analyze_activity(internship_id: str, request: ActivityAnalysisRequest) -> Ac
             evidence=result.anomalies,
             advisory="Activity pattern warrants institution review; it is not proof of fraudulent participation.",
         )
+        grievance_client.create_review_case(
+            request.student_id,
+            f"Activity review for {internship_id}",
+            result.anomalies,
+        )
         flag_id = flag.flag_id
     return ActivityAnalysisResponse(
         internship_id=internship_id,
@@ -80,7 +88,7 @@ def analyze_activity(internship_id: str, request: ActivityAnalysisRequest) -> Ac
 @app.post("/handoffs/document", response_model=Flag, status_code=201)
 def document_handoff(request: DocumentHandoffRequest) -> Flag:
     score = request.verification_score if request.verification_score is not None else 0.8
-    return flags.create(
+    flag = flags.create(
         student_id=request.student_id,
         subject_id=request.document_id,
         flag_type=FlagType.SUSPICIOUS_DOCUMENT,
@@ -88,6 +96,8 @@ def document_handoff(request: DocumentHandoffRequest) -> Flag:
         evidence=[request.reason],
         advisory="Document verification raised a concern; an institution reviewer must assess it.",
     )
+    grievance_client.create_review_case(request.student_id, "Suspicious document review", [request.reason])
+    return flag
 
 
 @app.get("/flags", response_model=FlagListResponse)

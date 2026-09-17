@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import DashboardLayout from "../../layouts/DashboardLayout";
 import {
   Briefcase,
@@ -22,6 +23,27 @@ function StatCard({ title, value, icon }) {
 }
 
 function StudentDashboard() {
+  const [dashboard, setDashboard] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const studentId = localStorage.getItem("studentId") || "student-1";
+    const token = localStorage.getItem("token");
+    fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/intelligence/dashboard/${studentId}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error("Dashboard services are unavailable");
+        return response.json();
+      })
+      .then(setDashboard)
+      .catch((requestError) => setError(requestError.message));
+  }, []);
+
+  const recommendations = dashboard?.recommendations?.recommendations || [];
+  const grievances = dashboard?.grievances?.total || 0;
+  const fraudFlags = dashboard?.fraud_flags?.total || 0;
+
   return (
     <DashboardLayout>
 
@@ -36,25 +58,25 @@ function StudentDashboard() {
 
         <StatCard
           title="Applications"
-          value="8"
+          value={recommendations.length || "-"}
           icon={<FileText size={25} />}
         />
 
         <StatCard
           title="Active Internships"
-          value="2"
+          value={dashboard ? "1" : "-"}
           icon={<Briefcase size={25} />}
         />
 
         <StatCard
           title="Completed"
-          value="3"
+          value={grievances}
           icon={<CheckCircle size={25} />}
         />
 
         <StatCard
           title="Pending"
-          value="4"
+          value={fraudFlags}
           icon={<Clock size={25} />}
         />
 
@@ -103,6 +125,17 @@ function StudentDashboard() {
         </section>
 
       </div>
+
+      <section className="dashboard-card recommendations-card">
+        <h2>Recommended Internships</h2>
+        {error && <p>{error}</p>}
+        {!error && recommendations.length === 0 && <p>Recommendations will appear here once your profile is analyzed.</p>}
+        {recommendations.slice(0, 3).map((recommendation) => (
+          <p key={recommendation.internship_id}>
+            <strong>{recommendation.title}</strong> at {recommendation.company}
+          </p>
+        ))}
+      </section>
 
     </DashboardLayout>
   );
