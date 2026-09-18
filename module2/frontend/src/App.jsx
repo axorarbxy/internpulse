@@ -27,9 +27,20 @@ import './App.css';
 
 function MainAppContent() {
   const { role, activeTab } = useNavigation();
-  const user = JSON.parse(window.localStorage.getItem('internpulse_user') || 'null');
 
-  // Render view depending on active role and tab
+  const user = (() => {
+    try {
+      const userData = window.localStorage.getItem('internpulse_user');
+      const parsedUser = userData ? JSON.parse(userData) : null;
+
+      return parsedUser && typeof parsedUser === 'object'
+        ? parsedUser
+        : null;
+    } catch {
+      return null;
+    }
+  })();
+
   const renderContent = () => {
     if (role === 'student') {
       switch (activeTab) {
