@@ -319,24 +319,14 @@ sequenceDiagram
 
 ---
 
-## 👥 Team
-
-| Member | Module |
-|---|---|
-| *(assign name)* | Module 1 — Core Backend |
-| *(assign name)* | Module 2 — Frontend & Dashboards |
-| *(assign name)* | Module 3 — AI Intelligence Layer |
-| *(assign name)* | Module 4 — Real-time & Security |
-
----
 
 ## 🗺 Roadmap
 
 - [x] Module 3 AI microservices — implemented & tested
-- [ ] Module 1 core backend & database schema
-- [ ] Module 2 dashboards
-- [ ] Module 4 real-time & encrypted messaging
-- [ ] End-to-end integration across all 4 modules
+- [x] Module 1 core backend & database schema
+- [x] Module 2 dashboards
+- [x] Module 4 real-time & encrypted messaging
+- [x] End-to-end integration across all 4 modules
 - [ ] Deployment
 
 ---
