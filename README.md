@@ -4,6 +4,15 @@ Complete PostgreSQL + Node.js/Express backend for Module 1.
 
 Features: registration/login, bcrypt password hashing, JWT authentication, RBAC, student/company/institution profiles, internship CRUD, applications and status lifecycle, certificates and verification.
 
+<img width="1891" height="860" alt="image" src="https://github.com/user-attachments/assets/39ccb453-4d76-4bad-b841-502f0272b094" />
+
+<img width="1897" height="852" alt="image" src="https://github.com/user-attachments/assets/79f21aae-8e47-4d71-bd38-445951714c5f" />
+
+<img width="1895" height="862" alt="image" src="https://github.com/user-attachments/assets/e7f27bac-785a-47a8-96a0-94cb94f15676" />
+
+
+
+
 ## Setup
 1. Create database `smart_internship` in PostgreSQL/pgAdmin.
 2. Run `database/schema.sql` inside that database.
