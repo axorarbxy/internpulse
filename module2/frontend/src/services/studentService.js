@@ -48,6 +48,32 @@ const emptyDashboard = {
   },
 };
 
+function createDashboardProfile(profile, localUser, studentId) {
+  const defaultSkills = ['React', 'Node.js', 'PostgreSQL', 'REST APIs', 'Git'];
+  const rawSkills = profile?.skills;
+  const skills = Array.isArray(rawSkills)
+    ? rawSkills
+    : typeof rawSkills === 'string'
+      ? rawSkills.split(',').map((skill) => skill.trim()).filter(Boolean)
+      : defaultSkills;
+
+  return {
+    id: profile?.id || `STU-${studentId}`,
+    name: profile?.name || localUser.name || 'Student',
+    avatar: profile?.avatar || 'https://ui-avatars.com/api/?background=4f46e5&color=fff&name=Student',
+    email: profile?.email || localUser.email || '',
+    university: profile?.college_name || 'InternPulse Partner Institution',
+    department: profile?.branch || profile?.course || 'Computer Science',
+    degree: profile?.course || 'Bachelor of Technology',
+    year: profile?.year ? `Year ${profile.year}` : 'Year 3',
+    gpa: profile?.gpa || '—',
+    targetRole: profile?.target_role || 'Internship Candidate',
+    profileCompleteness: profile?.profile_completeness || 60,
+    skills: skills.length ? skills : defaultSkills,
+    verifiedCredentials: Number(profile?.verified_credentials || 0),
+  };
+}
+
 export const studentService = {
   async getStudentProfile() {
     const response = await apiRequest('/students/profile');
@@ -120,16 +146,11 @@ export const studentService = {
       apiRequest('/applications/my'),
     ]);
 
-    const profile = profileRes.status === 'fulfilled' && profileRes.value?.profile
-      ? profileRes.value.profile
-      : {
-          name: localUser.name || 'Student',
-          college_name: 'Apex Institute of Technology',
-          course: 'B.Tech',
-          branch: 'Computer Science',
-          year: 'Year 3',
-          skills: 'Python, React, SQL',
-        };
+    const profile = createDashboardProfile(
+      profileRes.status === 'fulfilled' ? profileRes.value?.profile : null,
+      localUser,
+      studentId,
+    );
 
     const intelligence = intelligenceRes.status === 'fulfilled' && intelligenceRes.value
       ? intelligenceRes.value
