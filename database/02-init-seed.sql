@@ -4,10 +4,10 @@
 -- 1. Create Demo Users
 INSERT INTO users (id, name, email, password_hash, role)
 VALUES 
-  (1, 'Alex Morgan', 'student@internpulse.com', '$2b$10$U.Ohce./hn38UhxQO/xoh.ZDhRhpIetIcQGaLhJ2g7RgGNwkJteHS', 'STUDENT'),
-  (2, 'TechNova Recruiter', 'company@technova.com', '$2b$10$U.Ohce./hn38UhxQO/xoh.ZDhRhpIetIcQGaLhJ2g7RgGNwkJteHS', 'COMPANY'),
-  (3, 'Dean of Placements', 'institution@apex.edu', '$2b$10$U.Ohce./hn38UhxQO/xoh.ZDhRhpIetIcQGaLhJ2g7RgGNwkJteHS', 'INSTITUTION'),
-  (4, 'Platform Administrator', 'admin@internpulse.com', '$2b$10$U.Ohce./hn38UhxQO/xoh.ZDhRhpIetIcQGaLhJ2g7RgGNwkJteHS', 'ADMIN')
+  (1, 'Alex Morgan', 'student@internpulse.com', '$2b$10$ffzjMiAz/APt0Y79hU9FY.ayMdnB00uO23VwuyeXkR7ispNtpfq96', 'STUDENT'),
+  (2, 'TechNova Recruiter', 'company@technova.com', '$2b$10$ffzjMiAz/APt0Y79hU9FY.ayMdnB00uO23VwuyeXkR7ispNtpfq96', 'COMPANY'),
+  (3, 'Dean of Placements', 'institution@apex.edu', '$2b$10$ffzjMiAz/APt0Y79hU9FY.ayMdnB00uO23VwuyeXkR7ispNtpfq96', 'INSTITUTION'),
+  (4, 'Platform Administrator', 'admin@internpulse.com', '$2b$10$ffzjMiAz/APt0Y79hU9FY.ayMdnB00uO23VwuyeXkR7ispNtpfq96', 'ADMIN')
 ON CONFLICT (email) DO NOTHING;
 
 SELECT setval('users_id_seq', (SELECT GREATEST(MAX(id), 10) FROM users));
