@@ -37,7 +37,7 @@ async function studentDashboard(studentId) {
     skill_gaps: skillGaps.status === 'fulfilled' ? skillGaps.value : null,
     grievances: grievances.status === 'fulfilled' ? grievances.value : null,
     fraud_flags: fraudFlags.status === 'fulfilled'
-      ? { ...fraudFlags.value, flags: fraudFlags.value.flags.filter((flag) => flag.student_id === studentId) }
+      ? { ...fraudFlags.value, flags: (fraudFlags.value?.flags || []).filter((flag) => flag.student_id === studentId) }
       : null,
     services: {
       recommendations: recommendations.status === 'fulfilled',

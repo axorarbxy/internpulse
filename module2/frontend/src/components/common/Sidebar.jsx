@@ -100,12 +100,16 @@ export default function Sidebar() {
         <div className="sidebar-user-card">
           <img
             src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80"
-            alt="Alex Morgan"
+            alt="User avatar"
             className="sidebar-user-avatar"
           />
           <div className="sidebar-user-info">
-            <p className="sidebar-user-name">Alex Morgan</p>
-            <p className="sidebar-user-role">Apex Institute • Year 4</p>
+            <p className="sidebar-user-name">
+              {JSON.parse(window.localStorage.getItem('internpulse_user') || '{}').name || 'Demo User'}
+            </p>
+            <p className="sidebar-user-role" style={{ textTransform: 'capitalize' }}>
+              {JSON.parse(window.localStorage.getItem('internpulse_user') || '{}').role || role} Workspace
+            </p>
           </div>
         </div>
       </div>

@@ -1,14 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { IconUser } from '../../components/common/Icons';
+import { studentService } from '../../services';
 
 export default function StudentProfile() {
   const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const localUser = JSON.parse(window.localStorage.getItem('internpulse_user') || '{}');
 
   const [profile, setProfile] = useState({
-    name: 'Bhakti Shrikant Kadam',
-    email: 'bhakti@example.com',
+    name: localUser.name || 'Student Name',
+    email: localUser.email || 'student@internpulse.com',
     phone: '+91 98765 43210',
-    studentId: 'STU2026-001',
+    studentId: localUser.id ? `STU-${localUser.id}` : 'STU2026-001',
     branch: 'CSE - AIML',
     semester: 'Semester 4',
     college: 'Kolhapur Institute of Technology',
@@ -19,6 +23,23 @@ export default function StudentProfile() {
     portfolio: 'https://example.com/',
   });
 
+  useEffect(() => {
+    studentService.getStudentProfile().then((data) => {
+      if (data) {
+        setProfile((prev) => ({
+          ...prev,
+          name: data.name || prev.name,
+          email: data.email || prev.email,
+          phone: data.phone || prev.phone,
+          college: data.college_name || prev.college,
+          branch: data.branch || prev.branch,
+          semester: data.year ? `Year ${data.year}` : prev.semester,
+          skills: data.skills || prev.skills,
+        }));
+      }
+    }).catch(() => {});
+  }, []);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -28,9 +49,24 @@ export default function StudentProfile() {
     }));
   };
 
-  const handleSave = () => {
-    setIsEditing(false);
-    alert('Profile updated successfully!');
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await studentService.updateStudentProfile({
+        college_name: profile.college,
+        branch: profile.branch,
+        course: profile.branch,
+        year: parseInt(profile.semester.replace(/\D/g, '')) || 3,
+        skills: profile.skills,
+        phone: profile.phone,
+      });
+      setIsEditing(false);
+      alert('Profile updated and saved to database successfully!');
+    } catch (err) {
+      alert('Failed to save profile: ' + (err.message || 'Error occurred'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -62,8 +98,9 @@ export default function StudentProfile() {
             <button
               className="primary-button"
               onClick={handleSave}
+              disabled={saving}
             >
-              Save Changes
+              {saving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         )}

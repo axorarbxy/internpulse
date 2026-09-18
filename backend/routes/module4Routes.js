@@ -4,7 +4,10 @@ const module4BaseUrl = (process.env.MODULE4_API_URL || 'http://localhost:5004').
 
 router.use(async (req, res) => {
   try {
-    const module4Path = req.originalUrl.replace(/^\/api\/realtime/, '') || '/';
+    let module4Path = req.originalUrl.replace(/^\/api\/realtime/, '') || '/';
+    if (!module4Path.startsWith('/api') && !module4Path.startsWith('/health')) {
+      module4Path = `/api${module4Path}`;
+    }
     const headers = { Accept: req.headers.accept || 'application/json' };
     if (req.headers.authorization) {
       headers.Authorization = req.headers.authorization;
@@ -13,10 +16,12 @@ router.use(async (req, res) => {
       headers['Content-Type'] = 'application/json';
     }
 
+    const hasBody = !['GET', 'HEAD'].includes(req.method) && req.body && Object.keys(req.body).length > 0;
+
     const response = await fetch(`${module4BaseUrl}${module4Path}`, {
       method: req.method,
       headers,
-      body: ['GET', 'HEAD'].includes(req.method) ? undefined : JSON.stringify(req.body),
+      body: hasBody ? JSON.stringify(req.body) : undefined,
     });
 
     const contentType = response.headers.get('content-type');

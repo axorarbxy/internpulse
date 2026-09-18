@@ -140,13 +140,29 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* User Avatar */}
-        <div className="navbar-user-btn">
-          <img
-            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80"
-            alt="Alex Morgan"
-            className="navbar-user-avatar"
-          />
+        {/* User Avatar, Info & Logout */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ textAlign: 'right', lineHeight: '1.2' }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>
+              {JSON.parse(window.localStorage.getItem('internpulse_user') || '{}').name || 'Demo User'}
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
+              {JSON.parse(window.localStorage.getItem('internpulse_user') || '{}').role || role}
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ padding: '6px 10px', fontSize: '12px' }}
+            onClick={() => {
+              window.localStorage.removeItem('internpulse_token');
+              window.localStorage.removeItem('internpulse_user');
+              window.localStorage.removeItem('internpulse_student_id');
+              window.location.reload();
+            }}
+          >
+            Sign out
+          </button>
         </div>
       </div>
     </header>

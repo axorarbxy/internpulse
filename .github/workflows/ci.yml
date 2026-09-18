@@ -1,0 +1,85 @@
+name: Full-Stack CI Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  backend-test:
+    name: Core Backend & Module 4 Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package.json
+            Module-04/module-04-backend/package.json
+
+      - name: Test Core Backend
+        working-directory: backend
+        run: |
+          npm ci
+          npm test
+
+      - name: Test Module 4 Backend
+        working-directory: Module-04/module-04-backend
+        run: |
+          npm ci
+          npm test
+
+  ai-microservices-test:
+    name: Module 3 AI Microservices Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - recommendation-engine
+          - chatbot
+          - grievance-system
+          - feedback-analysis
+          - fraud-detection
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: module3/${{ matrix.service }}/requirements.txt
+
+      - name: Install Dependencies
+        working-directory: module3/${{ matrix.service }}
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run Pytest
+        working-directory: module3/${{ matrix.service }}
+        run: |
+          pytest --import-mode=importlib
+
+  frontend-build:
+    name: Frontend Build & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: module2/frontend/package.json
+
+      - name: Install and Build Frontend
+        working-directory: module2/frontend
+        run: |
+          npm ci
+          npm run build
