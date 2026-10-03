@@ -4,7 +4,8 @@ const QRCode = require('qrcode');
 const config = require('../config/env');
 
 async function buildVerificationQrDataUrl(certificateId) {
-  const verificationUrl = `${config.publicAppUrl}/verify/${certificateId}`;
+  const baseUrl = config.publicAppUrl.replace(/\/+$/, '');
+  const verificationUrl = `${baseUrl}/#/verify/${encodeURIComponent(certificateId)}`;
   const dataUrl = await QRCode.toDataURL(verificationUrl, { margin: 1, width: 300 });
   return { verificationUrl, dataUrl };
 }

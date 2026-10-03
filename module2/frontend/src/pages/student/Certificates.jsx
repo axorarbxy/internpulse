@@ -60,12 +60,15 @@ export default function Certificates() {
       });
   };
 
-  const handleDownload = (cert) => {
+  const handleDownload = async (cert) => {
     setDownloadToast(`Preparing download for ${cert.title} (${cert.id})...`);
-    setTimeout(() => {
+    try {
+      await studentService.downloadSignedCertificate(cert.id);
       setDownloadToast(`Downloaded certificate: ${cert.id}.pdf`);
-      setTimeout(() => setDownloadToast(null), 3500);
-    }, 1000);
+    } catch (downloadError) {
+      setDownloadToast(downloadError.message || 'Unable to download certificate.');
+    }
+    setTimeout(() => setDownloadToast(null), 3500);
   };
 
   // Calculate summary counts
@@ -102,7 +105,7 @@ export default function Certificates() {
     return (
       <div className="loading-container">
         <div className="spinner" />
-        <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: '15.4px' }}>
           Loading your verified credentials & certificates...
         </p>
       </div>
@@ -138,7 +141,7 @@ export default function Certificates() {
             alignItems: 'center',
             gap: '10px',
             zIndex: 110,
-            fontSize: '13px',
+            fontSize: '14.3px',
           }}
         >
           <IconCheckCircle size={18} color="var(--color-success)" />
@@ -246,7 +249,7 @@ export default function Certificates() {
                   </Badge>
                 </div>
 
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '12px 0', lineHeight: 1.5 }}>
+                <p style={{ fontSize: '13.2px', color: 'var(--text-muted)', margin: '12px 0', lineHeight: 1.5 }}>
                   {cert.description}
                 </p>
 
@@ -265,14 +268,14 @@ export default function Certificates() {
                   </div>
                   <div className="cert-meta-item">
                     <span className="cert-meta-label">Issuer</span>
-                    <span className="cert-meta-val" style={{ fontSize: '11px' }}>{cert.issuer}</span>
+                    <span className="cert-meta-val" style={{ fontSize: '12.1px' }}>{cert.issuer}</span>
                   </div>
                 </div>
 
                 <div style={{ marginTop: '12px' }}>
                   <div className="cert-skills-row">
                     {cert.skills.map((skill) => (
-                      <span key={skill} className="skill-tag" style={{ fontSize: '10px' }}>
+                      <span key={skill} className="skill-tag" style={{ fontSize: '11px' }}>
                         {skill}
                       </span>
                     ))}
@@ -295,6 +298,14 @@ export default function Certificates() {
                 >
                   <IconDownload size={14} /> Download
                 </button>
+                <a
+                  className="btn btn-outline btn-sm"
+                  href={cert.verificationUrl || `/#/verify/${encodeURIComponent(cert.id)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <IconShieldCheck size={14} /> Verify QR
+                </a>
               </div>
             </div>
           ))}
@@ -342,7 +353,7 @@ export default function Certificates() {
                 <p className="cert-institution-header">Apex Institute of Technology</p>
                 <h2 className="cert-doc-title">Certificate of Internship Completion</h2>
                 <p className="cert-recipient-intro">This is proudly presented to</p>
-                <h1 className="cert-recipient-name">Alex Morgan</h1>
+                <h1 className="cert-recipient-name">{selectedCert.studentName || 'Student'}</h1>
                 <p className="cert-body-paragraph">
                   in recognition of successful completion of the{' '}
                   <strong>{selectedCert.title}</strong> at{' '}
@@ -360,7 +371,7 @@ export default function Certificates() {
                   }}
                 >
                   {selectedCert.skills.map((s) => (
-                    <span key={s} className="skill-tag" style={{ background: '#eef2ff', borderColor: '#c7d2fe' }}>
+                    <span key={s} className="skill-tag" style={{ background: '#eef2ff', borderColor: '#fff2ba' }}>
                       {s}
                     </span>
                   ))}
@@ -368,8 +379,8 @@ export default function Certificates() {
 
                 <div className="cert-seal-row">
                   <div>
-                    <span style={{ display: 'block', fontSize: '11px', color: '#64748b' }}>Certificate ID:</span>
-                    <strong style={{ fontFamily: 'monospace', color: '#1e1b4b' }}>{selectedCert.id}</strong>
+                    <span style={{ display: 'block', fontSize: '12.1px', color: '#64748b' }}>Certificate ID:</span>
+                    <strong style={{ fontFamily: 'monospace', color: '#092b49' }}>{selectedCert.id}</strong>
                   </div>
 
                   <div className="cert-seal-badge">
@@ -378,7 +389,7 @@ export default function Certificates() {
                   </div>
 
                   <div>
-                    <span style={{ display: 'block', fontSize: '11px', color: '#64748b' }}>Date of Issue:</span>
+                    <span style={{ display: 'block', fontSize: '12.1px', color: '#64748b' }}>Date of Issue:</span>
                     <strong>{selectedCert.issueDate}</strong>
                   </div>
                 </div>

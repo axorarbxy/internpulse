@@ -1,9 +1,33 @@
 // EXTERNAL INTEGRATION DEPENDENCY — verifies JWTs issued by Module 1.
 // Module 4 does NOT issue tokens; it only trusts the shared JWT_SECRET.
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const config = require('../config/env');
 const { fail } = require('../utils/apiResponse');
 const logger = require('../utils/logger');
+
+const allowedRoles = new Set(['STUDENT', 'COMPANY', 'INSTITUTION', 'INSTITUTE', 'ADMIN']);
+
+function userFromPayload(payload) {
+  const id = payload.userId || payload.id;
+  const role = String(payload.role || '').toUpperCase();
+  if (!id || !allowedRoles.has(role)) throw new Error('Token has no valid user role');
+  return { id: String(id), role: role === 'INSTITUTE' ? 'INSTITUTION' : role };
+}
+
+function authenticateService(req, res, next) {
+  const expected = config.module1ServiceToken;
+  const received = req.headers['x-internal-service-key'];
+  if (!expected || typeof received !== 'string') {
+    return fail(res, 401, 'Internal service authentication required', 'UNAUTHENTICATED');
+  }
+  const expectedBuffer = Buffer.from(expected);
+  const receivedBuffer = Buffer.from(received);
+  if (expectedBuffer.length !== receivedBuffer.length || !crypto.timingSafeEqual(expectedBuffer, receivedBuffer)) {
+    return fail(res, 401, 'Internal service authentication required', 'UNAUTHENTICATED');
+  }
+  return next();
+}
 
 function authenticate(req, res, next) {
   const header = req.headers.authorization || '';
@@ -15,11 +39,7 @@ function authenticate(req, res, next) {
 
   try {
     const payload = jwt.verify(token, config.jwtSecret);
-    // Expected shape from Module 1: { userId, role, ...}
-    req.user = { id: payload.userId || payload.id, role: payload.role };
-    if (!req.user.id || !req.user.role) {
-      throw new Error('Token missing userId/role claims');
-    }
+    req.user = userFromPayload(payload);
     return next();
   } catch (err) {
     logger.warn('JWT verification failed', { reason: err.message });
@@ -30,9 +50,7 @@ function authenticate(req, res, next) {
 // Socket.IO handshake auth — same JWT, different transport
 function verifySocketToken(token) {
   const payload = jwt.verify(token, config.jwtSecret);
-  const user = { id: payload.userId || payload.id, role: payload.role };
-  if (!user.id || !user.role) throw new Error('Token missing userId/role claims');
-  return user;
+  return userFromPayload(payload);
 }
 
-module.exports = { authenticate, verifySocketToken };
+module.exports = { authenticate, authenticateService, verifySocketToken };

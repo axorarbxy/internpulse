@@ -3,7 +3,7 @@ import ChatLayout from '../components/ChatLayout';
 
 export default function MessagesPage({ currentUserId }) {
   return (
-    <div className="max-w-5xl mx-auto py-8">
+    <div className="messages-page">
       <ChatLayout currentUserId={currentUserId} />
     </div>
   );

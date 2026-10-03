@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   IconBriefcase,
   IconUsers,
@@ -7,77 +7,37 @@ import {
   IconCalendar,
   IconArrowRight,
 } from '../../components/common/Icons';
-
-const initialPostings = [
-  {
-    id: 1,
-    title: 'Machine Learning Intern',
-    department: 'AI / ML',
-    location: 'Pune',
-    applicants: 64,
-    shortlisted: 18,
-    interviews: 8,
-    status: 'Published',
-  },
-  {
-    id: 2,
-    title: 'Frontend Developer Intern',
-    department: 'Engineering',
-    location: 'Remote',
-    applicants: 52,
-    shortlisted: 12,
-    interviews: 6,
-    status: 'Published',
-  },
-  {
-    id: 3,
-    title: 'Data Analytics Intern',
-    department: 'Analytics',
-    location: 'Mumbai',
-    applicants: 40,
-    shortlisted: 9,
-    interviews: 4,
-    status: 'Published',
-  },
-];
-
-const candidates = [
-  {
-    id: 1,
-    name: 'Aarav Patil',
-    role: 'Machine Learning Intern',
-    match: 94,
-    status: 'Shortlisted',
-    date: '15 Sep 2026',
-  },
-  {
-    id: 2,
-    name: 'Priya Sharma',
-    role: 'Frontend Developer Intern',
-    match: 89,
-    status: 'Interview',
-    date: '14 Sep 2026',
-  },
-  {
-    id: 3,
-    name: 'Rohan Deshmukh',
-    role: 'Data Analytics Intern',
-    match: 86,
-    status: 'New',
-    date: '13 Sep 2026',
-  },
-  {
-    id: 4,
-    name: 'Sneha Kulkarni',
-    role: 'Machine Learning Intern',
-    match: 82,
-    status: 'New',
-    date: '12 Sep 2026',
-  },
-];
+import { useNavigation } from '../../context';
+import companyService from '../../services/companyService';
 
 export default function CompanyDashboard() {
+  const { setActiveTab } = useNavigation();
   const [candidateFilter, setCandidateFilter] = useState('All');
+  const [postings, setPostings] = useState([]);
+  const [candidates, setCandidates] = useState([]);
+  const [companyName, setCompanyName] = useState('TechNova Solutions');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let isActive = true;
+    Promise.all([
+      companyService.getProfile(),
+      companyService.getInternships(),
+      companyService.getApplications(),
+    ]).then(([profile, internships, applications]) => {
+      if (!isActive) return;
+      setCompanyName(profile?.company_name || 'Company Workspace');
+      setPostings(internships);
+      setCandidates(applications);
+    }).catch((requestError) => {
+      if (isActive) setError(requestError.message || 'Unable to load company dashboard.');
+    }).finally(() => {
+      if (isActive) setLoading(false);
+    });
+
+    return () => { isActive = false; };
+  }, []);
 
   const filteredCandidates = useMemo(() => {
     if (candidateFilter === 'All') return candidates;
@@ -85,26 +45,12 @@ export default function CompanyDashboard() {
     return candidates.filter(
       (candidate) => candidate.status === candidateFilter
     );
-  }, [candidateFilter]);
+  }, [candidateFilter, candidates]);
 
-  const totalApplicants = initialPostings.reduce(
-    (sum, posting) => sum + posting.applicants,
-    0
-  );
-
-  const totalShortlisted = initialPostings.reduce(
-    (sum, posting) => sum + posting.shortlisted,
-    0
-  );
-
-  const totalInterviews = initialPostings.reduce(
-    (sum, posting) => sum + posting.interviews,
-    0
-  );
-
-  const handleAction = (message) => {
-    alert(message);
-  };
+  const totalApplicants = candidates.length;
+  const totalShortlisted = candidates.filter((candidate) => ['Shortlisted', 'Interview', 'Active'].includes(candidate.status)).length;
+  const totalInterviews = candidates.filter((candidate) => candidate.status === 'Interview').length;
+  const activePostings = postings.filter((posting) => posting.status === 'Published');
 
   return (
     <div className="page-container company-dashboard">
@@ -116,372 +62,218 @@ export default function CompanyDashboard() {
         </p>
       </div>
 
+      {error && <div className="alert alert-danger" role="alert">{error}</div>}
+      {loading && <div className="company-dashboard-loading" role="status">Loading company workspace...</div>}
+
       {/* KPI Cards */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns:
-            'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '16px',
-          marginBottom: '24px',
-        }}
-      >
-        <div className="card">
-          <div className="card-body">
-            <IconBriefcase size={24} />
-            <div className="stat-label">Active Postings</div>
-            <div className="stat-value">{initialPostings.length}</div>
-            <small>Currently published</small>
-          </div>
+      <div className="company-kpi-grid">
+        <div className="company-kpi-card">
+          <div className="company-kpi-icon icon-teal"><IconBriefcase size={21} /></div>
+          <span className="company-kpi-label">Active Postings</span>
+          <strong className="company-kpi-value">{activePostings.length}</strong>
+          <small>Currently published</small>
         </div>
 
-        <div className="card">
-          <div className="card-body">
-            <IconUsers size={24} />
-            <div className="stat-label">Total Applicants</div>
-            <div className="stat-value">{totalApplicants}</div>
-            <small>Across all postings</small>
-          </div>
+        <div className="company-kpi-card">
+          <div className="company-kpi-icon icon-blue"><IconUsers size={21} /></div>
+          <span className="company-kpi-label">Total Applicants</span>
+          <strong className="company-kpi-value">{totalApplicants}</strong>
+          <small>Across all postings</small>
         </div>
 
-        <div className="card">
-          <div className="card-body">
-            <IconCheckCircle size={24} />
-            <div className="stat-label">Shortlisted</div>
-            <div className="stat-value">{totalShortlisted}</div>
-            <small>Candidates shortlisted</small>
-          </div>
+        <div className="company-kpi-card">
+          <div className="company-kpi-icon icon-amber"><IconCheckCircle size={21} /></div>
+          <span className="company-kpi-label">Shortlisted</span>
+          <strong className="company-kpi-value">{totalShortlisted}</strong>
+          <small>Candidates shortlisted</small>
         </div>
 
-        <div className="card">
-          <div className="card-body">
-            <IconCalendar size={24} />
-            <div className="stat-label">Interviews</div>
-            <div className="stat-value">{totalInterviews}</div>
-            <small>Scheduled interviews</small>
-          </div>
+        <div className="company-kpi-card">
+          <div className="company-kpi-icon icon-coral"><IconCalendar size={21} /></div>
+          <span className="company-kpi-label">Interviews</span>
+          <strong className="company-kpi-value">{totalInterviews}</strong>
+          <small>Scheduled interviews</small>
         </div>
       </div>
 
       {/* Company Overview */}
-      <div
-        className="card"
-        style={{ marginBottom: '24px' }}
-      >
-        <div className="card-body">
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: '20px',
-              flexWrap: 'wrap',
-            }}
-          >
-            <div>
-              <h3>TechNova Solutions</h3>
-              <p>
-                Technology company focused on AI, software engineering,
-                and data-driven solutions.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() =>
-                handleAction('Opening internship posting form...')
-              }
-            >
-              + Post Internship
-            </button>
-          </div>
+      <div className="company-overview">
+        <div className="company-overview-mark"><IconBriefcase size={23} /></div>
+        <div className="company-overview-copy">
+          <h3>{companyName}</h3>
+          <p>Technology company focused on AI, software engineering, and data-driven solutions.</p>
         </div>
+        <button
+          type="button"
+          className="btn btn-primary company-post-action"
+          onClick={() => setActiveTab('manage')}
+        >
+          + Post Internship
+        </button>
       </div>
 
       {/* Quick Actions */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns:
-            'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '14px',
-          marginBottom: '24px',
-        }}
-      >
+      <div className="company-quick-actions">
         <button
           type="button"
-          className="card"
-          style={{
-            textAlign: 'left',
-            cursor: 'pointer',
-            border: 'none',
-          }}
-          onClick={() =>
-            handleAction('Opening applicant management...')
-          }
+          className="company-quick-action"
+          onClick={() => setActiveTab('applicants')}
         >
-          <div className="card-body">
-            <IconUsers size={22} />
+          <div className="company-action-icon icon-blue"><IconUsers size={20} /></div>
+          <div>
             <h4>View Applicants</h4>
             <p>Review and shortlist candidates.</p>
           </div>
+          <IconArrowRight size={16} className="company-action-arrow" />
         </button>
 
         <button
           type="button"
-          className="card"
-          style={{
-            textAlign: 'left',
-            cursor: 'pointer',
-            border: 'none',
-          }}
-          onClick={() =>
-            handleAction('Opening interview scheduler...')
-          }
+          className="company-quick-action"
+          onClick={() => setActiveTab('applicants')}
         >
-          <div className="card-body">
-            <IconCalendar size={22} />
+          <div className="company-action-icon icon-amber"><IconCalendar size={20} /></div>
+          <div>
             <h4>Schedule Interviews</h4>
             <p>Manage upcoming candidate interviews.</p>
           </div>
+          <IconArrowRight size={16} className="company-action-arrow" />
         </button>
 
         <button
           type="button"
-          className="card"
-          style={{
-            textAlign: 'left',
-            cursor: 'pointer',
-            border: 'none',
-          }}
-          onClick={() =>
-            handleAction('Opening active intern monitoring...')
-          }
+          className="company-quick-action"
+          onClick={() => setActiveTab('progress')}
         >
-          <div className="card-body">
-            <IconClock size={22} />
+          <div className="company-action-icon icon-coral"><IconClock size={20} /></div>
+          <div>
             <h4>Monitor Interns</h4>
             <p>Track progress and evaluations.</p>
           </div>
+          <IconArrowRight size={16} className="company-action-arrow" />
         </button>
       </div>
 
       {/* Internship Postings */}
-      <div
-        className="card"
-        style={{ marginBottom: '24px' }}
-      >
-        <div className="card-body">
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '18px',
-            }}
-          >
+      <section className="company-section-card">
+        <div className="company-section-header">
             <div>
               <h3>Active Internship Postings</h3>
               <p>Monitor applications for each opportunity.</p>
             </div>
-          </div>
+        </div>
 
-          <div style={{ overflowX: 'auto' }}>
-            <table
-              style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-              }}
-            >
+          <div className="company-postings-table-wrap">
+            <table className="company-postings-table">
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: '12px' }}>
-                    Internship
-                  </th>
-                  <th style={{ textAlign: 'left', padding: '12px' }}>
-                    Location
-                  </th>
-                  <th style={{ textAlign: 'left', padding: '12px' }}>
-                    Applicants
-                  </th>
-                  <th style={{ textAlign: 'left', padding: '12px' }}>
-                    Shortlisted
-                  </th>
-                  <th style={{ textAlign: 'left', padding: '12px' }}>
-                    Status
-                  </th>
-                  <th style={{ textAlign: 'left', padding: '12px' }}>
-                    Action
-                  </th>
+                  <th>Internship</th>
+                  <th>Location</th>
+                  <th>Applicants</th>
+                  <th>Shortlisted</th>
+                  <th>Status</th>
+                  <th>Action</th>
                 </tr>
               </thead>
 
               <tbody>
-                {initialPostings.map((posting) => (
+                {activePostings.map((posting) => (
                   <tr key={posting.id}>
-                    <td style={{ padding: '12px' }}>
+                    <td>
                       <strong>{posting.title}</strong>
-                      <div>
-                        <small>{posting.department}</small>
-                      </div>
+                      <small>{posting.department}</small>
                     </td>
 
-                    <td style={{ padding: '12px' }}>
-                      {posting.location}
+                    <td>{posting.location}</td>
+
+                    <td>{posting.applicants}</td>
+
+                    <td>{candidates.filter((candidate) => candidate.internship_id === posting.id && ['Shortlisted', 'Interview', 'Active'].includes(candidate.status)).length}</td>
+
+                    <td>
+                      <span className="company-published-badge">{posting.status}</span>
                     </td>
 
-                    <td style={{ padding: '12px' }}>
-                      {posting.applicants}
-                    </td>
-
-                    <td style={{ padding: '12px' }}>
-                      {posting.shortlisted}
-                    </td>
-
-                    <td style={{ padding: '12px' }}>
-                      <span className="badge">
-                        {posting.status}
-                      </span>
-                    </td>
-
-                    <td style={{ padding: '12px' }}>
+                    <td>
                       <button
                         type="button"
-                        className="btn btn-secondary"
-                        onClick={() =>
-                          handleAction(
-                            `Managing ${posting.title}...`
-                          )
-                        }
+                        className="company-manage-button"
+                        onClick={() => setActiveTab('manage')}
                       >
                         Manage
                       </button>
                     </td>
                   </tr>
                 ))}
+                {!loading && activePostings.length === 0 && (
+                  <tr><td colSpan="6">No published postings yet.</td></tr>
+                )}
               </tbody>
             </table>
           </div>
-        </div>
-      </div>
+      </section>
 
       {/* Candidate Pipeline */}
-      <div className="card">
-        <div className="card-body">
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: '15px',
-              flexWrap: 'wrap',
-              marginBottom: '18px',
-            }}
-          >
+      <section className="company-section-card">
+        <div className="company-section-header">
             <div>
               <h3>Candidate Pipeline</h3>
               <p>Track candidates through the hiring process.</p>
             </div>
 
-            <div
-              style={{
-                display: 'flex',
-                gap: '8px',
-                flexWrap: 'wrap',
-              }}
-            >
-              {['All', 'New', 'Shortlisted', 'Interview'].map(
+            <div className="company-pipeline-filters" role="group" aria-label="Filter candidates by stage">
+              {['All', 'New', 'Shortlisted', 'Interview', 'Active'].map(
                 (filter) => (
                   <button
                     key={filter}
                     type="button"
-                    className={
-                      candidateFilter === filter
-                        ? 'btn btn-primary'
-                        : 'btn btn-secondary'
-                    }
-                    onClick={() =>
-                      setCandidateFilter(filter)
-                    }
+                    className={`company-pipeline-filter${candidateFilter === filter ? ' active' : ''}`}
+                    onClick={() => setCandidateFilter(filter)}
                   >
                     {filter}
                   </button>
                 )
               )}
             </div>
-          </div>
+        </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gap: '12px',
-            }}
-          >
+          <div className="company-candidate-list">
             {filteredCandidates.map((candidate) => (
-              <div
-                key={candidate.id}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: '15px',
-                  padding: '14px',
-                  border: '1px solid var(--border-color, #e5e7eb)',
-                  borderRadius: '10px',
-                  flexWrap: 'wrap',
-                }}
-              >
-                <div>
+              <article className="company-candidate-row" key={candidate.id}>
+                <div className="company-candidate-info">
+                  <span className="company-candidate-avatar" aria-hidden="true">{candidate.name.split(' ').map((part) => part[0]).join('')}</span>
+                  <div>
                   <strong>{candidate.name}</strong>
-                  <div>{candidate.role}</div>
-                  <small>Applied: {candidate.date}</small>
+                    <p>{candidate.role}</p>
+                    <small>Applied {candidate.date}</small>
+                  </div>
                 </div>
 
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  <span className="badge">
-                    {candidate.match}% Match
-                  </span>
+                <div className="company-candidate-actions">
+                  <span className="company-match-badge">{candidate.match}% match</span>
 
-                  <span className="badge">
+                  <span className={`company-candidate-status status-${candidate.status.toLowerCase()}`}>
                     {candidate.status}
                   </span>
 
                   <button
                     type="button"
-                    className="btn btn-secondary"
-                    onClick={() =>
-                      handleAction(
-                        `Opening ${candidate.name}'s profile...`
-                      )
-                    }
+                    className="company-manage-button"
+                    onClick={() => setActiveTab('applicants')}
                   >
                     View <IconArrowRight size={15} />
                   </button>
                 </div>
-              </div>
+              </article>
             ))}
 
             {filteredCandidates.length === 0 && (
-              <div
-                style={{
-                  textAlign: 'center',
-                  padding: '30px',
-                }}
-              >
+              <div className="company-pipeline-empty">
                 <p>No candidates in this stage.</p>
               </div>
             )}
           </div>
-        </div>
-      </div>
+      </section>
     </div>
   );
 }

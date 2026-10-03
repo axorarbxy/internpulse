@@ -25,7 +25,7 @@ export default function Sidebar() {
     { id: 'analytics', label: 'Student Analytics', icon: IconAnalytics },
     { id: 'profile', label: 'Student Profile', icon: IconUser },
     { id: 'resume', label: 'Resume Builder', icon: IconFileText },
-    { id: 'certificates', label: 'Certificates', icon: IconAward, badge: '2 Verified' },
+    { id: 'certificates', label: 'Certificates', icon: IconAward, badge: '1 Verified' },
     { id: 'recommendations', label: 'Recommendations', icon: IconSparkles, badge: 'New' },
     { id: 'messages', label: 'Messages', icon: IconFileText },
     { id: 'notifications', label: 'Notifications', icon: IconBell },
@@ -48,8 +48,12 @@ export default function Sidebar() {
     { id: 'notifications', label: 'Notifications', icon: IconBell },
   ];
 
+  const adminNav = [
+    { id: 'dashboard', label: 'Admin Review Center', icon: IconCheckCircle },
+  ];
+
   const currentNav =
-    role === 'institution' ? institutionNav : role === 'company' ? companyNav : studentNav;
+    role === 'institution' ? institutionNav : role === 'company' ? companyNav : role === 'admin' ? adminNav : studentNav;
 
   return (
     <aside className={`sidebar-container ${isMobileMenuOpen ? 'open' : ''}`}>

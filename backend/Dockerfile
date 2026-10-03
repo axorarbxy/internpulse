@@ -1,14 +1,16 @@
 FROM node:20-alpine AS builder
-WORKDIR /app
-COPY package*.json ./
+WORKDIR /app/backend
+COPY backend/package*.json ./
 RUN npm ci --only=production
 
 FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=builder /app/node_modules ./node_modules
-COPY . .
+COPY --from=builder /app/backend/node_modules ./backend/node_modules
+COPY backend ./backend
+COPY sign-in ./sign-in
 
+WORKDIR /app/backend
 USER node
 EXPOSE 5000
 

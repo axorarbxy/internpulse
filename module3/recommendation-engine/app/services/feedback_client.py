@@ -8,6 +8,7 @@ class FeedbackScoreClient:
 
     def __init__(self, base_url: str | None = None) -> None:
         self.base_url = (base_url or os.getenv("FEEDBACK_API_URL", "")).rstrip("/")
+        self.service_key = os.getenv("CORE_SERVICE_KEY", "")
 
     def get_quality_score(self, company_id: str) -> float | None:
         if not self.base_url:
@@ -15,6 +16,7 @@ class FeedbackScoreClient:
         try:
             response = httpx.get(
                 f"{self.base_url}/companies/{company_id}/score",
+                headers={"X-Internal-Service-Key": self.service_key} if self.service_key else {},
                 timeout=2.0,
             )
             response.raise_for_status()

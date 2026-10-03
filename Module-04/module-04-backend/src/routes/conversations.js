@@ -8,7 +8,9 @@ const router = express.Router();
 router.use(authenticate);
 
 router.get('/', conversationController.list);
+router.get('/contacts', conversationController.contacts);
 router.post('/', conversationController.create);
+router.get('/:id/keys', conversationController.keys);
 router.get('/:id/messages', messageController.getHistory);
 router.post('/:id/messages', messageLimiter, messageController.send);
 

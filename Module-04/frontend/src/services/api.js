@@ -22,10 +22,16 @@ export const notificationsApi = {
 
 export const conversationsApi = {
   list: () => api.get('/conversations'),
-  create: (participantIds, internshipId) => api.post('/conversations', { participantIds, internshipId }),
+  contacts: () => api.get('/conversations/contacts'),
+  create: (participantIds, internshipId) => api.post('/conversations', { participantIds, ...(internshipId ? { internshipId } : {}) }),
+  keys: (conversationId) => api.get(`/conversations/${conversationId}/keys`),
   messages: (conversationId, params) => api.get(`/conversations/${conversationId}/messages`, { params }),
   sendMessage: (conversationId, ciphertext, iv) =>
     api.post(`/conversations/${conversationId}/messages`, { ciphertext, iv }),
+};
+
+export const keysApi = {
+  register: (algorithm, publicKey) => api.put('/keys/me', { algorithm, publicKey }),
 };
 
 export const certificatesApi = {

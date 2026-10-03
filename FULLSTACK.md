@@ -44,3 +44,13 @@ The browser calls core APIs through `/api`. Module 4 REST calls use `/api/realti
 5. Start the React shell from `module2/frontend` with `npm install` and `npm run dev`.
 
 Sign in through the React shell. The JWT is shared by core APIs, Module 4 REST, and the Module 4 Socket.IO handshake. Messages and notifications are available in every role workspace.
+
+## Workspace Isolation
+
+- The core API reloads the account role from PostgreSQL on every authenticated request; a client URL or local-storage role cannot grant another workspace.
+- Public registration creates student accounts immediately. Company and institution accounts create profiles and remain blocked by RBAC until an administrator approves their organization registration request in the Admin Review Center.
+- Student profile, application, certificate, and intelligence APIs are scoped to the authenticated student. Company internship and applicant APIs are scoped to the authenticated company. Draft and archived internships are not returned by general listing endpoints.
+- Messages require the authenticated user to be one of the internship's student/company participants. Module 3 document callbacks use the internal service key.
+- Student-to-institution membership is stored in `student_institution_memberships`; apply `database/03-institution-membership.sql` before deploying the roster API. Only an `ADMIN` can assign/unassign a student with `PUT /api/institutions/students/:studentUserId/institution`; an `INSTITUTION` can read only its own `/api/institutions/students` roster. Existing students remain unassigned until an administrator assigns them.
+- Institution Monitoring, Dashboard, and Analytics use the institution-scoped roster and application/progress records. Missing progress or evaluation data is shown as zero/empty rather than fabricated sample values.
+- When `NODE_ENV=production`, the core requires `JWT_SECRET` and `INTERNAL_SERVICE_KEY` to be at least 32 characters and not development placeholders. Module 4 also requires a strong `CERTIFICATE_SIGNING_KEY`, a strong `MODULE1_SERVICE_TOKEN`, and `MODULE1_MODE=live`.

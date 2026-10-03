@@ -11,7 +11,6 @@ import {
 export default function Navbar() {
   const {
     role,
-    setRole,
     activeTab,
     isMobileMenuOpen,
     setIsMobileMenuOpen,
@@ -23,11 +22,24 @@ export default function Navbar() {
     markAllAsRead,
   } = useNavigation();
 
-  // Helper for page title
+  const storedUser = (() => {
+    try {
+      const userData = window.localStorage.getItem('internpulse_user');
+      const parsedUser = userData ? JSON.parse(userData) : {};
+
+      return parsedUser && typeof parsedUser === 'object'
+        ? parsedUser
+        : {};
+    } catch {
+      return {};
+    }
+  })();
+
   const getPageTitle = () => {
     const formattedTab = activeTab
       .replace(/([A-Z])/g, ' $1')
       .replace(/^./, (str) => str.toUpperCase());
+
     return formattedTab;
   };
 
@@ -73,32 +85,6 @@ export default function Navbar() {
       </div>
 
       <div className="navbar-right">
-        {/* Role Switcher Pill Bar for Quick Demonstration */}
-        <div className="role-switcher-group" role="group" aria-label="Portal Role Selector">
-          <button
-            type="button"
-            className={`role-switch-btn ${role === 'student' ? 'active' : ''}`}
-            onClick={() => setRole('student')}
-          >
-            Student
-          </button>
-          <button
-            type="button"
-            className={`role-switch-btn ${role === 'institution' ? 'active' : ''}`}
-            onClick={() => setRole('institution')}
-          >
-            Institution
-          </button>
-          <button
-            type="button"
-            className={`role-switch-btn ${role === 'company' ? 'active' : ''}`}
-            onClick={() => setRole('company')}
-          >
-            Company
-          </button>
-        </div>
-
-        {/* Notification Bell with Dropdown Popover */}
         <div className="notification-bell-wrap">
           <button
             type="button"
@@ -107,31 +93,55 @@ export default function Navbar() {
             aria-label="View notifications"
           >
             <IconBell size={20} />
-            {unreadCount > 0 && <span className="notification-badge-count">{unreadCount}</span>}
+
+            {unreadCount > 0 && (
+              <span className="notification-badge-count">
+                {unreadCount}
+              </span>
+            )}
           </button>
 
           {isNotificationsOpen && (
             <div className="notifications-dropdown">
               <div className="notifications-dropdown-header">
                 <h4>Notifications ({unreadCount} new)</h4>
+
                 {unreadCount > 0 && (
-                  <button type="button" className="mark-all-read-btn" onClick={markAllAsRead}>
+                  <button
+                    type="button"
+                    className="mark-all-read-btn"
+                    onClick={markAllAsRead}
+                  >
                     Mark all read
                   </button>
                 )}
               </div>
+
               <div className="notifications-dropdown-list">
                 {notifications.map((item) => (
                   <div
                     key={item.id}
-                    className={`notification-item ${item.unread ? 'unread' : ''}`}
+                    className={`notification-item ${
+                      item.unread ? 'unread' : ''
+                    }`}
                     onClick={() => markAsRead(item.id)}
                   >
-                    <div className="notification-item-icon">{getNotificationIcon(item.type)}</div>
+                    <div className="notification-item-icon">
+                      {getNotificationIcon(item.type)}
+                    </div>
+
                     <div className="notification-item-content">
-                      <p className="notification-item-title">{item.title}</p>
-                      <p className="notification-item-desc">{item.description}</p>
-                      <span className="notification-item-time">{item.time}</span>
+                      <p className="notification-item-title">
+                        {item.title}
+                      </p>
+
+                      <p className="notification-item-desc">
+                        {item.description}
+                      </p>
+
+                      <span className="notification-item-time">
+                        {item.time}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -140,20 +150,33 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* User Avatar, Info & Logout */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{ textAlign: 'right', lineHeight: '1.2' }}>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>
-              {JSON.parse(window.localStorage.getItem('internpulse_user') || '{}').name || 'Demo User'}
+            <div
+              style={{
+                fontSize: '14.3px',
+                fontWeight: 600,
+                color: 'var(--text-main)',
+              }}
+            >
+              {storedUser.name || 'Demo User'}
             </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
-              {JSON.parse(window.localStorage.getItem('internpulse_user') || '{}').role || role}
+
+            <div
+              style={{
+                fontSize: '12.1px',
+                color: 'var(--text-muted)',
+                textTransform: 'capitalize',
+              }}
+            >
+              {storedUser.role || role}
             </div>
           </div>
+
           <button
             type="button"
             className="btn btn-secondary"
-            style={{ padding: '6px 10px', fontSize: '12px' }}
+            style={{ padding: '6px 10px', fontSize: '13.2px' }}
             onClick={() => {
               window.localStorage.removeItem('internpulse_token');
               window.localStorage.removeItem('internpulse_user');

@@ -4,7 +4,17 @@
 // This adapter normalizes that payload into Module 4's internal shape.
 // While MODULE3_MODE=mock, normalizePayload just validates shape; no outbound calls happen.
 function normalizePayload(rawPayload) {
-  const { documentId, internshipId, status, verificationScore, reason, verifiedBy } = rawPayload;
+  const {
+    documentId,
+    internshipId,
+    status,
+    verificationScore,
+    reason,
+    verifiedBy,
+    flagId,
+    studentId,
+    flagType,
+  } = rawPayload;
 
   if (!documentId || !status) {
     const err = new Error('Invalid Module 3 payload: documentId and status are required');
@@ -24,6 +34,9 @@ function normalizePayload(rawPayload) {
   return {
     documentId,
     internshipId: internshipId || null,
+    flagId: flagId || null,
+    studentId: studentId || null,
+    flagType: flagType || null,
     verificationStatus: status,
     verificationScore: typeof verificationScore === 'number' ? verificationScore : null,
     reason: reason || null,

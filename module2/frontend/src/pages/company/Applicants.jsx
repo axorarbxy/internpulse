@@ -1,75 +1,39 @@
-import { useState } from 'react';
-import { IconUsers } from '../../components/common/Icons';
-
-const initialApplicants = [
-  {
-    id: 1,
-    name: 'Aarav Patil',
-    email: 'aarav.patil@example.com',
-    role: 'Machine Learning Intern',
-    skills: 'Python, Machine Learning, TensorFlow',
-    match: 94,
-    applied: '12 Sep 2026',
-    status: 'Shortlisted',
-  },
-  {
-    id: 2,
-    name: 'Priya Sharma',
-    email: 'priya.sharma@example.com',
-    role: 'Frontend Developer Intern',
-    skills: 'React, JavaScript, CSS',
-    match: 89,
-    applied: '11 Sep 2026',
-    status: 'Interview',
-  },
-  {
-    id: 3,
-    name: 'Rohan Deshmukh',
-    email: 'rohan.deshmukh@example.com',
-    role: 'Data Analytics Intern',
-    skills: 'Python, SQL, Power BI',
-    match: 86,
-    applied: '10 Sep 2026',
-    status: 'New',
-  },
-  {
-    id: 4,
-    name: 'Sneha Kulkarni',
-    email: 'sneha.kulkarni@example.com',
-    role: 'AI Research Intern',
-    skills: 'Python, NLP, Deep Learning',
-    match: 91,
-    applied: '09 Sep 2026',
-    status: 'Shortlisted',
-  },
-  {
-    id: 5,
-    name: 'Aditya Joshi',
-    email: 'aditya.joshi@example.com',
-    role: 'Backend Developer Intern',
-    skills: 'Java, Spring Boot, PostgreSQL',
-    match: 82,
-    applied: '08 Sep 2026',
-    status: 'New',
-  },
-];
+import { useEffect, useState } from 'react';
+import { IconSearch, IconUsers } from '../../components/common/Icons';
+import companyService from '../../services/companyService';
 
 export default function Applicants() {
-  const [applicants, setApplicants] = useState(initialApplicants);
+  const [applicants, setApplicants] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [selectedApplicant, setSelectedApplicant] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [updatingId, setUpdatingId] = useState(null);
+  const [error, setError] = useState('');
 
-  const updateStatus = (id, newStatus) => {
-    setApplicants(
-      applicants.map((applicant) =>
-        applicant.id === id
-          ? { ...applicant, status: newStatus }
-          : applicant
-      )
-    );
+  useEffect(() => {
+    let isActive = true;
+    companyService.getApplications()
+      .then((records) => { if (isActive) setApplicants(records); })
+      .catch((requestError) => { if (isActive) setError(requestError.message || 'Unable to load applicants.'); })
+      .finally(() => { if (isActive) setLoading(false); });
+    return () => { isActive = false; };
+  }, []);
 
-    alert(`Candidate moved to ${newStatus}.`);
+  const updateStatus = async (id, newStatus) => {
+    setUpdatingId(id);
+    setError('');
+    try {
+      await companyService.updateApplicationStatus(id, newStatus);
+      setApplicants((previous) => previous.map((applicant) => (
+        applicant.id === id ? { ...applicant, status: newStatus } : applicant
+      )));
+      setSelectedApplicant((previous) => previous?.id === id ? { ...previous, status: newStatus } : previous);
+    } catch (requestError) {
+      setError(requestError.message || 'Unable to update candidate stage.');
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
   const filteredApplicants = applicants.filter((applicant) => {
@@ -90,7 +54,7 @@ export default function Applicants() {
     applicants.filter((applicant) => applicant.status === status).length;
 
   return (
-    <div className="page-container applicants">
+    <div className="page-container company-dashboard applicants">
       {/* Header */}
       <div className="page-header">
         <div>
@@ -102,8 +66,10 @@ export default function Applicants() {
         </div>
       </div>
 
+      {error && <div className="alert alert-danger" role="alert">{error}</div>}
+
       {/* Overview */}
-      <div className="profile-card">
+      <div className="profile-card applicant-overview">
         <div className="profile-avatar">
           <IconUsers size={34} />
         </div>
@@ -119,20 +85,20 @@ export default function Applicants() {
       </div>
 
       {/* KPI Cards */}
-      <div className="stats-grid">
-        <div className="stat-card">
+      <div className="stats-grid applicant-kpi-grid">
+        <div className="stat-card applicant-stat-card">
           <span className="stat-label">Total Applicants</span>
           <strong className="stat-value">{applicants.length}</strong>
           <span className="stat-subtitle">Received applications</span>
         </div>
 
-        <div className="stat-card">
+        <div className="stat-card applicant-stat-card">
           <span className="stat-label">New</span>
           <strong className="stat-value">{countByStatus('New')}</strong>
           <span className="stat-subtitle">Awaiting review</span>
         </div>
 
-        <div className="stat-card">
+        <div className="stat-card applicant-stat-card">
           <span className="stat-label">Shortlisted</span>
           <strong className="stat-value">
             {countByStatus('Shortlisted')}
@@ -140,7 +106,7 @@ export default function Applicants() {
           <span className="stat-subtitle">Selected for next stage</span>
         </div>
 
-        <div className="stat-card">
+        <div className="stat-card applicant-stat-card">
           <span className="stat-label">Interviews</span>
           <strong className="stat-value">
             {countByStatus('Interview')}
@@ -150,36 +116,44 @@ export default function Applicants() {
       </div>
 
       {/* Pipeline */}
-      <div className="profile-section">
+      <div className="profile-section applicants-section-card">
         <div className="section-title">
           <h3>Candidate Pipeline</h3>
           <p>Current recruitment stage distribution</p>
         </div>
 
-        <div className="action-grid">
+        <div className="applicant-stage-grid" role="group" aria-label="Filter candidates by pipeline stage">
           <button
-            className="secondary-button"
+            type="button"
+            className={`applicant-stage-card${statusFilter === 'New' ? ' active' : ''}`}
+            aria-pressed={statusFilter === 'New'}
             onClick={() => setStatusFilter('New')}
           >
             New — {countByStatus('New')}
           </button>
 
           <button
-            className="secondary-button"
+            type="button"
+            className={`applicant-stage-card${statusFilter === 'Shortlisted' ? ' active' : ''}`}
+            aria-pressed={statusFilter === 'Shortlisted'}
             onClick={() => setStatusFilter('Shortlisted')}
           >
             Shortlisted — {countByStatus('Shortlisted')}
           </button>
 
           <button
-            className="secondary-button"
+            type="button"
+            className={`applicant-stage-card${statusFilter === 'Interview' ? ' active' : ''}`}
+            aria-pressed={statusFilter === 'Interview'}
             onClick={() => setStatusFilter('Interview')}
           >
             Interview — {countByStatus('Interview')}
           </button>
 
           <button
-            className="secondary-button"
+            type="button"
+            className={`applicant-stage-card${statusFilter === 'All' ? ' active' : ''}`}
+            aria-pressed={statusFilter === 'All'}
             onClick={() => setStatusFilter('All')}
           >
             All Candidates — {applicants.length}
@@ -188,38 +162,42 @@ export default function Applicants() {
       </div>
 
       {/* Search and Filters */}
-      <div className="profile-section">
+      <div className="profile-section applicants-section-card">
         <div className="section-title">
           <h3>Applicant Review</h3>
           <p>Search candidates by name, role or skills</p>
         </div>
 
-        <div className="filter-row">
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search candidates..."
-          />
+        <div className="applicant-filter-row">
+          <label className="applicant-search-field">
+            <IconSearch size={17} aria-hidden="true" />
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search candidates"
+              aria-label="Search candidates by name, role, or skills"
+            />
+          </label>
 
-          {['All', 'New', 'Shortlisted', 'Interview'].map((status) => (
-            <button
-              key={status}
-              className={
-                statusFilter === status
-                  ? 'primary-button'
-                  : 'secondary-button'
-              }
-              onClick={() => setStatusFilter(status)}
-            >
-              {status}
-            </button>
-          ))}
+          <div className="applicant-filter-tabs" role="group" aria-label="Filter applicants by status">
+            {['All', 'New', 'Shortlisted', 'Interview', 'Active', 'Rejected'].map((status) => (
+              <button
+                key={status}
+                type="button"
+                className={`applicant-filter-tab${statusFilter === status ? ' active' : ''}`}
+                aria-pressed={statusFilter === status}
+                onClick={() => setStatusFilter(status)}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Applicant Table */}
-        <div className="table-wrapper">
-          <table className="data-table">
+        <div className="table-wrapper applicant-table-wrap">
+          <table className="data-table applicant-table">
             <thead>
               <tr>
                 <th>Candidate</th>
@@ -233,6 +211,7 @@ export default function Applicants() {
             </thead>
 
             <tbody>
+              {loading && <tr><td colSpan="7">Loading applicant pipeline...</td></tr>}
               {filteredApplicants.length > 0 ? (
                 filteredApplicants.map((applicant) => (
                   <tr key={applicant.id}>
@@ -253,7 +232,7 @@ export default function Applicants() {
                     <td>{applicant.applied}</td>
 
                     <td>
-                      <span className="status-badge">
+                      <span className={`applicant-status-badge status-${applicant.status.toLowerCase()}`}>
                         {applicant.status}
                       </span>
                     </td>
@@ -261,7 +240,8 @@ export default function Applicants() {
                     <td>
                       <div className="button-row">
                         <button
-                          className="secondary-button"
+                          type="button"
+                          className="applicant-row-button secondary"
                           onClick={() => setSelectedApplicant(applicant)}
                         >
                           Review
@@ -269,10 +249,12 @@ export default function Applicants() {
 
                         {applicant.status === 'New' && (
                           <button
-                            className="primary-button"
+                            type="button"
+                            className="applicant-row-button primary"
                             onClick={() =>
                               updateStatus(applicant.id, 'Shortlisted')
                             }
+                            disabled={updatingId === applicant.id}
                           >
                             Shortlist
                           </button>
@@ -280,19 +262,32 @@ export default function Applicants() {
 
                         {applicant.status === 'Shortlisted' && (
                           <button
-                            className="primary-button"
+                            type="button"
+                            className="applicant-row-button primary"
                             onClick={() =>
                               updateStatus(applicant.id, 'Interview')
                             }
+                            disabled={updatingId === applicant.id}
                           >
                             Interview
+                          </button>
+                        )}
+
+                        {applicant.status === 'Interview' && (
+                          <button
+                            type="button"
+                            className="applicant-row-button primary"
+                            onClick={() => updateStatus(applicant.id, 'Active')}
+                            disabled={updatingId === applicant.id}
+                          >
+                            Start Internship
                           </button>
                         )}
                       </div>
                     </td>
                   </tr>
                 ))
-              ) : (
+              ) : !loading && (
                 <tr>
                   <td colSpan="7">
                     No applicants found.
@@ -306,28 +301,29 @@ export default function Applicants() {
 
       {/* Candidate Review Modal */}
       {selectedApplicant && (
-        <div className="modal-overlay">
-          <div className="modal-card">
+        <div className="applicant-modal-overlay" onClick={() => setSelectedApplicant(null)}>
+          <div className="applicant-modal" role="dialog" aria-modal="true" aria-labelledby="applicant-modal-title" onClick={(event) => event.stopPropagation()}>
             <div className="modal-header">
               <div>
-                <h3>{selectedApplicant.name}</h3>
+                <h3 id="applicant-modal-title">{selectedApplicant.name}</h3>
                 <p>{selectedApplicant.email}</p>
               </div>
 
               <button
-                className="secondary-button"
+                type="button"
+                className="applicant-row-button secondary"
                 onClick={() => setSelectedApplicant(null)}
               >
                 Close
               </button>
             </div>
 
-            <div className="profile-section">
+            <div className="review-detail-card">
               <div className="section-title">
                 <h3>Application Details</h3>
               </div>
 
-              <div className="detail-grid">
+              <div className="applicant-detail-grid">
                 <div>
                   <span className="detail-label">Applied Role</span>
                   <strong>{selectedApplicant.role}</strong>
@@ -349,28 +345,29 @@ export default function Applicants() {
                 </div>
               </div>
 
-              <div className="skills-list">
+              <div className="applicant-skills-list">
                 <span className="detail-label">Skills</span>
                 <p>{selectedApplicant.skills}</p>
               </div>
             </div>
 
-            <div className="button-row">
+            <div className="applicant-modal-actions">
               <button
-                className="primary-button"
+                type="button"
+                className="applicant-row-button primary"
                 onClick={() => {
                   updateStatus(selectedApplicant.id, 'Shortlisted');
-                  setSelectedApplicant(null);
                 }}
+                disabled={updatingId === selectedApplicant.id}
               >
                 Shortlist Candidate
               </button>
 
               <button
-                className="secondary-button"
-                onClick={() =>
-                  alert('Interview scheduling opened.')
-                }
+                type="button"
+                className="applicant-row-button secondary"
+                onClick={() => updateStatus(selectedApplicant.id, 'Interview')}
+                disabled={updatingId === selectedApplicant.id}
               >
                 Schedule Interview
               </button>

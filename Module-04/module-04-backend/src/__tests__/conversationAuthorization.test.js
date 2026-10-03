@@ -2,6 +2,8 @@
 // must never be able to read/send to a conversation, even with a valid JWT.
 jest.mock('../models/Conversation', () => ({
   findById: jest.fn(),
+  findOne: jest.fn(),
+  create: jest.fn(),
 }));
 
 const Conversation = require('../models/Conversation');
@@ -26,5 +28,17 @@ describe('conversationService.isParticipant', () => {
     Conversation.findById.mockResolvedValue({ participantIds: ['student-a', 'company-b'] });
     const result = await conversationService.isParticipant('conv-1', 'student-a');
     expect(result).toBe(true);
+  });
+
+  test('scopes conversation reuse to the same internship', async () => {
+    Conversation.findOne.mockResolvedValue(null);
+    Conversation.create.mockResolvedValue({ _id: 'conv-2' });
+
+    await conversationService.createConversation(['student-a', 'company-b'], 'internship-2');
+
+    expect(Conversation.findOne).toHaveBeenCalledWith({
+      participantIds: { $all: ['student-a', 'company-b'], $size: 2 },
+      internshipId: 'internship-2',
+    });
   });
 });

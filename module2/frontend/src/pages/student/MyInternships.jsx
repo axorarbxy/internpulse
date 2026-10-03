@@ -1,58 +1,64 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { IconFolderCheck } from '../../components/common/Icons';
-
-const initialInternships = [
-  {
-    id: 1,
-    title: 'Machine Learning Intern',
-    company: 'TechNova Solutions',
-    location: 'Pune',
-    startDate: '01 Jul 2026',
-    endDate: '31 Dec 2026',
-    status: 'Active',
-    progress: 68,
-    hours: 326,
-    totalHours: 480,
-    reports: 8,
-    totalReports: 12,
-    mentor: 'Rahul Mehta',
-  },
-  {
-    id: 2,
-    title: 'Frontend Developer Intern',
-    company: 'WebCraft Technologies',
-    location: 'Remote',
-    startDate: '15 Jun 2026',
-    endDate: '15 Oct 2026',
-    status: 'Active',
-    progress: 82,
-    hours: 295,
-    totalHours: 360,
-    reports: 10,
-    totalReports: 12,
-    mentor: 'Sneha Joshi',
-  },
-  {
-    id: 3,
-    title: 'Data Analytics Intern',
-    company: 'DataSphere Analytics',
-    location: 'Mumbai',
-    startDate: '01 Apr 2026',
-    endDate: '30 Jun 2026',
-    status: 'Completed',
-    progress: 100,
-    hours: 480,
-    totalHours: 480,
-    reports: 12,
-    totalReports: 12,
-    mentor: 'Amit Shah',
-  },
-];
+import apiRequest from '../../services/api';
 
 export default function MyInternships() {
-  const [internships, setInternships] = useState(initialInternships);
+  const [internships, setInternships] = useState([]);
   const [filter, setFilter] = useState('All');
   const [selectedInternship, setSelectedInternship] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    apiRequest('/applications/my')
+      .then((response) => {
+        const applications = response.applications || [];
+        let demoTracking = {};
+        try {
+          demoTracking = JSON.parse(window.localStorage.getItem('internpulse_demo_progress') || '{}');
+        } catch {
+          demoTracking = {};
+        }
+        setInternships(applications.map((application) => {
+          const tracking = {
+            ...(demoTracking[String(application.internship_id)] || {}),
+            ...(application.demo_tracking || {}),
+          };
+          return {
+            ...application,
+            title: application.title || 'Internship',
+            company: application.company_name || 'Company',
+            location: application.location || 'Location not specified',
+            status: application.status === 'ONGOING' ? 'Active' : application.status,
+            ...tracking,
+            hasDemoTracking: Boolean(tracking.demo),
+            progress: tracking.progress ?? (application.status === 'COMPLETED' ? 100 : 0),
+            hours: tracking.hours ?? 0,
+            totalHours: tracking.totalHours ?? 0,
+            reports: tracking.reports ?? 0,
+            totalReports: tracking.totalReports ?? 0,
+            mentor: tracking.mentor || 'Not assigned',
+            startDate: application.start_date ? new Date(application.start_date).toLocaleDateString() : (application.applied_at ? new Date(application.applied_at).toLocaleDateString() : 'Not started'),
+            endDate: application.end_date ? new Date(application.end_date).toLocaleDateString() : 'Not specified',
+            duration: application.duration_months ? `${application.duration_months} months` : 'Not specified',
+            stipend: application.stipend ? `₹${Number(application.stipend).toLocaleString('en-IN')} / month` : 'Not specified',
+          };
+        }));
+      })
+      .catch((requestError) => setError(requestError.message || 'Unable to load applications.'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (!selectedInternship) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setSelectedInternship(null);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedInternship]);
 
   const filteredInternships = useMemo(() => {
     if (filter === 'All') return internships;
@@ -70,10 +76,9 @@ export default function MyInternships() {
     (internship) => internship.status === 'Completed'
   ).length;
 
-  const averageProgress = Math.round(
-    internships.reduce((sum, internship) => sum + internship.progress, 0) /
-      internships.length
-  );
+  const averageProgress = internships.length
+    ? Math.round(internships.reduce((sum, internship) => sum + internship.progress, 0) / internships.length)
+    : 0;
 
   const totalHours = internships.reduce(
     (sum, internship) => sum + internship.hours,
@@ -92,12 +97,9 @@ export default function MyInternships() {
     );
   };
 
-  const handleWithdraw = (id) => {
-    setInternships((current) =>
-      current.filter((internship) => internship.id !== id)
-    );
-    setSelectedInternship(null);
-  };
+  if (loading) {
+    return <div className="loading-container"><div className="spinner" /><p>Loading your applications...</p></div>;
+  }
 
   return (
     <div className="page-container my-internships">
@@ -108,6 +110,8 @@ export default function MyInternships() {
           and application statuses.
         </p>
       </div>
+
+      {error && <div className="alert alert-danger" role="alert">{error}</div>}
 
       {/* Summary Cards */}
       <div
@@ -212,6 +216,7 @@ export default function MyInternships() {
                     <span className="badge">
                       {internship.status}
                     </span>
+                    {internship.hasDemoTracking && <small className="student-demo-tracking-label">Demo tracking data</small>}
                   </div>
                 </div>
 
@@ -219,7 +224,7 @@ export default function MyInternships() {
                   <strong>{internship.progress}%</strong>
                   <div
                     style={{
-                      fontSize: '13px',
+                      fontSize: '14.3px',
                       marginTop: '4px',
                     }}
                   >
@@ -267,8 +272,13 @@ export default function MyInternships() {
                 <div>
                   <small>Duration</small>
                   <div>
-                    📅 {internship.startDate} - {internship.endDate}
+                    📅 {internship.duration} · {internship.startDate} - {internship.endDate}
                   </div>
+                </div>
+
+                <div>
+                  <small>Stipend</small>
+                  <div>💰 {internship.stipend}</div>
                 </div>
 
                 <div>
@@ -356,107 +366,41 @@ export default function MyInternships() {
       {/* Details Modal */}
       {selectedInternship && (
         <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.45)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px',
-            zIndex: 1000,
-          }}
+          className="internship-details-overlay"
+          onClick={() => setSelectedInternship(null)}
         >
           <div
-            className="card"
-            style={{
-              width: '100%',
-              maxWidth: '620px',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-            }}
+            className="internship-details-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="internship-details-title"
+            onClick={(event) => event.stopPropagation()}
           >
-            <div className="card-body">
-              <h2>{selectedInternship.title}</h2>
-              <p>{selectedInternship.company}</p>
-
-              <hr />
-
-              <div style={{ lineHeight: '2' }}>
-                <div>
-                  <strong>Status:</strong>{' '}
-                  {selectedInternship.status}
-                </div>
-                <div>
-                  <strong>Location:</strong>{' '}
-                  {selectedInternship.location}
-                </div>
-                <div>
-                  <strong>Mentor:</strong>{' '}
-                  {selectedInternship.mentor}
-                </div>
-                <div>
-                  <strong>Duration:</strong>{' '}
-                  {selectedInternship.startDate} -{' '}
-                  {selectedInternship.endDate}
-                </div>
-                <div>
-                  <strong>Progress:</strong>{' '}
-                  {selectedInternship.progress}%
-                </div>
-                <div>
-                  <strong>Hours:</strong>{' '}
-                  {selectedInternship.hours} /{' '}
-                  {selectedInternship.totalHours}
-                </div>
-                <div>
-                  <strong>Reports:</strong>{' '}
-                  {selectedInternship.reports} /{' '}
-                  {selectedInternship.totalReports}
-                </div>
+            <header className="internship-details-header">
+              <div>
+                <h2 id="internship-details-title">{selectedInternship.title}</h2>
+                <p>{selectedInternship.company}</p>
               </div>
+              <button type="button" onClick={() => setSelectedInternship(null)}>Close</button>
+            </header>
 
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '10px',
-                  flexWrap: 'wrap',
-                  marginTop: '24px',
-                }}
-              >
-                {selectedInternship.status === 'Active' && (
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() =>
-                      handleSubmitReport(selectedInternship)
-                    }
-                  >
-                    Submit Report
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setSelectedInternship(null)}
-                >
-                  Close
-                </button>
-
-                {selectedInternship.status === 'Active' && (
-                  <button
-                    type="button"
-                    className="btn btn-danger"
-                    onClick={() =>
-                      handleWithdraw(selectedInternship.id)
-                    }
-                  >
-                    Withdraw
-                  </button>
-                )}
-              </div>
+            <div className="internship-details-fields">
+              <div><strong>Status</strong><span>{selectedInternship.status}</span></div>
+              <div><strong>Location</strong><span>{selectedInternship.location}</span></div>
+              <div><strong>Mentor</strong><span>{selectedInternship.mentor}</span></div>
+              <div><strong>Duration</strong><span>{selectedInternship.startDate} - {selectedInternship.endDate}</span></div>
+              <div><strong>Progress</strong><span>{selectedInternship.progress}%</span></div>
+              <div><strong>Hours</strong><span>{selectedInternship.hours} / {selectedInternship.totalHours}</span></div>
+              <div><strong>Reports</strong><span>{selectedInternship.reports} / {selectedInternship.totalReports}</span></div>
             </div>
+
+            {selectedInternship.status === 'Active' && (
+              <footer className="internship-details-actions">
+                <button type="button" className="btn btn-primary" onClick={() => handleSubmitReport(selectedInternship)}>
+                  Submit Report
+                </button>
+              </footer>
+            )}
           </div>
         </div>
       )}

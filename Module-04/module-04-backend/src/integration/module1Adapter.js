@@ -1,7 +1,7 @@
 // EXTERNAL INTEGRATION DEPENDENCY — Module 1 (core backend) contract.
 // REQUIRED CONTRACT (must be mapped to Module 1's real endpoints during integration):
 //   GET {MODULE1_BASE_URL}/users/:id
-//   GET {MODULE1_BASE_URL}/internships/:id
+//   GET {MODULE1_BASE_URL}/applications/:id/certificate-data
 //   GET {MODULE1_BASE_URL}/internships/:id/participants
 //   GET {MODULE1_BASE_URL}/internships/active
 //
@@ -35,11 +35,47 @@ async function getUser(userId) {
   return requestModule1(`/api/integration/users/${encodeURIComponent(userId)}`);
 }
 
+async function getUsers() {
+  if (config.module1Mode === 'mock') return Object.values(MOCK_USERS);
+  const response = await requestModule1('/api/integration/users');
+  return response.users || [];
+}
+
 async function getInternship(internshipId) {
   if (config.module1Mode === 'mock') {
     return MOCK_INTERNSHIPS[internshipId] || null;
   }
   return requestModule1(`/api/integration/internships/${encodeURIComponent(internshipId)}`);
+}
+
+async function getCompletedApplication(applicationId) {
+  if (config.module1Mode === 'mock') {
+    const internship = MOCK_INTERNSHIPS[applicationId];
+    if (!internship) return null;
+    return {
+      applicationId,
+      internshipId: internship.id,
+      applicationStatus: 'COMPLETED',
+      internshipTitle: internship.title,
+      studentId: internship.studentId,
+      studentName: MOCK_USERS[internship.studentId].name,
+      companyId: internship.companyId,
+      companyName: MOCK_USERS[internship.companyId].name,
+      startDate: internship.startDate,
+      endDate: internship.endDate,
+    };
+  }
+  const response = await requestModule1(`/api/integration/applications/${encodeURIComponent(applicationId)}/certificate-data`);
+  const application = response.application;
+  return application ? {
+    ...application,
+    applicationId: String(application.application_id),
+    internshipId: String(application.internship_id),
+    applicationStatus: application.application_status,
+    internshipTitle: application.internship_title,
+    studentId: String(application.student_id),
+    companyId: String(application.company_id),
+  } : null;
 }
 
 async function getInternshipParticipants(internshipId) {
@@ -81,4 +117,4 @@ async function requestModule1(path) {
   return payload;
 }
 
-module.exports = { getUser, getInternship, getInternshipParticipants, getActiveInternships };
+module.exports = { getUser, getUsers, getInternship, getCompletedApplication, getInternshipParticipants, getActiveInternships };

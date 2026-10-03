@@ -86,12 +86,22 @@ function initSocketServer(httpServer) {
       }
     });
 
-    socket.on('typing_start', ({ conversationId }) => {
-      socket.to(`conversation:${conversationId}`).emit('user:typing', { userId, conversationId, typing: true });
+    const emitTyping = async (conversationId, typing) => {
+      if (typeof conversationId !== 'string' || !conversationId) return;
+      try {
+        if (!(await conversationService.isParticipant(conversationId, userId))) return;
+        socket.to(`conversation:${conversationId}`).emit('user:typing', { userId, conversationId, typing });
+      } catch (err) {
+        logger.warn('Typing event authorization failed', { userId, error: err.message });
+      }
+    };
+
+    socket.on('typing_start', ({ conversationId } = {}) => {
+      void emitTyping(conversationId, true);
     });
 
-    socket.on('typing_stop', ({ conversationId }) => {
-      socket.to(`conversation:${conversationId}`).emit('user:typing', { userId, conversationId, typing: false });
+    socket.on('typing_stop', ({ conversationId } = {}) => {
+      void emitTyping(conversationId, false);
     });
 
     socket.on('mark_notification_read', async ({ notificationId }, callback) => {

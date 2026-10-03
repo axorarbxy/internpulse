@@ -17,6 +17,17 @@ router.get('/users/:userId', async (req, res) => {
   }
 });
 
+router.get('/users', async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT id, name, role FROM users WHERE role IN ('STUDENT', 'COMPANY', 'INSTITUTION', 'ADMIN') ORDER BY role, name"
+    );
+    return res.json({ users: result.rows });
+  } catch (error) {
+    return res.status(500).json({ message: 'Failed to load users' });
+  }
+});
+
 router.get('/students/:userId', async (req, res) => {
   try {
     const result = await pool.query(
@@ -34,6 +45,34 @@ router.get('/students/:userId', async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ message: 'Failed to load student profile' });
+  }
+});
+
+router.get('/applications/:applicationId/certificate-data', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT a.id AS application_id, a.status AS application_status,
+              i.id AS internship_id, i.title AS internship_title,
+              i.start_date, i.end_date,
+              student_user.id AS student_id, student_user.name AS student_name,
+              company_user.id AS company_id, c.company_name
+       FROM applications a
+       JOIN internships i ON i.id = a.internship_id
+       JOIN students s ON s.id = a.student_id
+       JOIN users student_user ON student_user.id = s.user_id
+       JOIN companies c ON c.id = i.company_id
+       JOIN users company_user ON company_user.id = c.user_id
+       WHERE a.id = $1`,
+      [req.params.applicationId]
+    );
+    const application = result.rows[0];
+    if (!application) return res.status(404).json({ message: 'Application not found' });
+    if (application.application_status !== 'COMPLETED') {
+      return res.status(409).json({ message: 'Internship application must be completed before certificate issuance' });
+    }
+    return res.json({ application });
+  } catch (error) {
+    return res.status(500).json({ message: 'Failed to load completed application' });
   }
 });
 
@@ -75,9 +114,9 @@ router.get('/internships/:internshipId/participants', async (req, res) => {
       `SELECT s.user_id AS student_user_id, c.user_id AS company_user_id
        FROM internships i
        JOIN companies c ON c.id = i.company_id
-       LEFT JOIN applications a ON a.internship_id = i.id
+      LEFT JOIN applications a ON a.internship_id = i.id AND a.status IN ('SELECTED', 'ONGOING')
        LEFT JOIN students s ON s.id = a.student_id
-       WHERE i.id = $1`,
+      WHERE i.id = $1 AND i.status = 'POSTED'`,
       [req.params.internshipId]
     );
     if (!result.rows[0]) return res.status(404).json({ message: 'Internship not found' });
@@ -95,9 +134,9 @@ router.get('/internships/:internshipId', async (req, res) => {
               c.user_id AS company_user_id, s.user_id AS student_user_id
        FROM internships i
        JOIN companies c ON c.id = i.company_id
-       LEFT JOIN applications a ON a.internship_id = i.id AND a.status IN ('SELECTED', 'ONGOING', 'COMPLETED')
+      LEFT JOIN applications a ON a.internship_id = i.id AND a.status IN ('SELECTED', 'ONGOING')
        LEFT JOIN students s ON s.id = a.student_id
-       WHERE i.id = $1`,
+      WHERE i.id = $1 AND i.status = 'POSTED'`,
       [req.params.internshipId]
     );
     const internship = result.rows[0];

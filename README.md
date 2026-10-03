@@ -1,4 +1,4 @@
-# Smart Internship Management System — Module 1
+# InternPulse
 
 Complete PostgreSQL + Node.js/Express backend for Module 1.
 

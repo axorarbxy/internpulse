@@ -10,10 +10,17 @@ export default function StatCard({
   accent = 'primary',
   onClick,
 }) {
+  const handleKeyDown = (event) => {
+    if (!onClick || (event.key !== 'Enter' && event.key !== ' ')) return;
+    event.preventDefault();
+    event.currentTarget.click();
+  };
+
   return (
     <div
       className={`stat-card stat-card-${accent} ${onClick ? 'stat-card-clickable' : ''}`}
       onClick={onClick}
+      onKeyDown={handleKeyDown}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
     >
@@ -33,7 +40,12 @@ export default function StatCard({
         <div className="stat-card-footer">
           {trend && (
             <span className={`stat-card-trend trend-${trendType}`}>
-              <IconTrendingUp size={14} className="trend-icon" />
+              {trendType !== 'neutral' && (
+                <IconTrendingUp
+                  size={14}
+                  className={`trend-icon ${trendType === 'down' ? 'trend-icon-down' : ''}`}
+                />
+              )}
               {trend}
             </span>
           )}

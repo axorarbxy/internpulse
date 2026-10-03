@@ -1,4 +1,8 @@
+import hmac
+import os
+
 from fastapi import FastAPI, Query
+from fastapi.responses import JSONResponse
 
 from app.knowledge_base.faqs import FAQS
 from app.models.schemas import (
@@ -11,15 +15,28 @@ from app.models.schemas import (
 from app.services.escalation import GrievanceEscalator
 from app.services.llm_client import LLMClient
 from app.services.retriever import FAQRetriever
-from app.sessions.store import InMemorySessionStore
+from app.sessions.store import create_session_store
 
 app = FastAPI(
     title="Student AI Chatbot",
     version="1.0.0",
     description="Retrieval-augmented FAQ support with optional LLM generation and grievance escalation.",
 )
+service_key = os.getenv("CORE_SERVICE_KEY", "").strip()
+
+
+@app.middleware("http")
+async def require_internal_service_key(request, call_next):
+    if request.url.path == "/health" or not service_key:
+        return await call_next(request)
+    supplied_key = request.headers.get("X-Internal-Service-Key", "")
+    if not hmac.compare_digest(supplied_key, service_key):
+        return JSONResponse(status_code=401, content={"detail": "Service authentication required"})
+    return await call_next(request)
+
+
 retriever = FAQRetriever(FAQS)
-sessions = InMemorySessionStore()
+sessions = create_session_store()
 llm = LLMClient()
 escalator = GrievanceEscalator()
 

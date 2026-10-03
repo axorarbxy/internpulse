@@ -10,6 +10,7 @@ router.get('/verify/:certificateId', controller.verify);
 
 router.use(authenticate);
 router.post('/', requireRole('COMPANY', 'ADMIN'), controller.issue);
+router.get('/my', requireRole('STUDENT'), controller.listMine);
 router.get('/:id', controller.getOne);
 router.get('/:id/download', controller.download);
 

@@ -25,6 +25,7 @@ class Severity(str, Enum):
 class ContentAnalysisRequest(BaseModel):
     student_id: str = Field(min_length=1)
     submission_id: str = Field(min_length=1)
+    internship_id: str | None = None
     content: str = Field(min_length=20, max_length=200000)
     file_name: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -62,6 +63,7 @@ class ActivityAnalysisResponse(BaseModel):
 class DocumentHandoffRequest(BaseModel):
     student_id: str = Field(min_length=1)
     document_id: str = Field(min_length=1)
+    internship_id: str | None = None
     reason: str = Field(min_length=1, max_length=2000)
     verification_score: float | None = Field(default=None, ge=0.0, le=1.0)
 
@@ -75,6 +77,7 @@ class Flag(BaseModel):
     score: float = Field(ge=0.0, le=1.0)
     evidence: list[str]
     status: FlagStatus = FlagStatus.PENDING
+    published_to_module4: bool = False
     advisory: str
     created_at: datetime
     resolved_at: datetime | None = None
@@ -85,5 +88,12 @@ class FlagListResponse(BaseModel):
     total: int
 
 
+class ResolveOutcome(str, Enum):
+    CLEARED = "cleared"
+    CONFIRMED = "confirmed"
+
+
 class ResolveFlagRequest(BaseModel):
     resolution_note: str | None = Field(default=None, max_length=2000)
+    outcome: ResolveOutcome = ResolveOutcome.CLEARED
+    reviewed_by: str | None = Field(default=None, max_length=100)

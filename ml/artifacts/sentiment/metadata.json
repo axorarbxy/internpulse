@@ -1,0 +1,65 @@
+{
+  "task": "sentiment",
+  "model_version": "1.0.0+20261002",
+  "trained_at": "2026-10-02T14:32:51.745415+00:00",
+  "input_type": "text",
+  "label_classes": [
+    "negative",
+    "positive"
+  ],
+  "positive_class": "positive",
+  "threshold": 0.5,
+  "feature_count": 556956,
+  "metrics": {
+    "test": {
+      "accuracy": 0.8978219951599893,
+      "macro_precision": 0.8984961444700388,
+      "macro_recall": 0.8977456416908247,
+      "macro_f1": 0.8977647533132121,
+      "weighted_f1": 0.897773859970654,
+      "per_class": {
+        "negative": {
+          "precision": 0.9139724486927185,
+          "recall": 0.8774628879892038,
+          "f1": 0.8953456348113468
+        },
+        "positive": {
+          "precision": 0.8830198402473589,
+          "recall": 0.9180283953924457,
+          "f1": 0.9001838718150775
+        }
+      }
+    },
+    "baseline_test": {
+      "accuracy": 0.41301425114278034,
+      "macro_precision": 0.6931397540776123,
+      "macro_recall": 0.4122973674991947,
+      "macro_f1": 0.4621517544158372,
+      "weighted_f1": 0.462570247459474,
+      "per_class": {
+        "negative": {
+          "precision": 0.839632277834525,
+          "recall": 0.22186234817813766,
+          "f1": 0.35098206660973524
+        },
+        "positive": {
+          "precision": 0.5466472303206997,
+          "recall": 0.6027323868202518,
+          "f1": 0.5733214422219391
+        }
+      }
+    }
+  },
+  "dataset": [
+    {
+      "file": "IMDB Dataset.csv",
+      "rows_used": 49582,
+      "sha256": "dfc447764f82be365fa9c2beef4e8df89d3919e3da95f5088004797d79695aa2"
+    }
+  ],
+  "random_state": 42,
+  "python_version": "3.12.10",
+  "sklearn_version": "1.6.1",
+  "joblib_version": "1.4.2",
+  "numpy_version": "2.3.2"
+}

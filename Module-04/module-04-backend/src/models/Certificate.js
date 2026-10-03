@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const CertificateSchema = new mongoose.Schema(
   {
     certificateId: { type: String, required: true, unique: true, index: true },
+    applicationId: { type: String, required: true, unique: true, sparse: true },
     internshipId: { type: String, required: true },
     studentId: { type: String, required: true },
     companyId: { type: String, required: true },
@@ -18,6 +19,11 @@ const CertificateSchema = new mongoose.Schema(
     certificateHash: { type: String, required: true },
     signature: { type: String, required: true },
     verificationUrl: { type: String, required: true },
+    fraudWarnings: [{
+      flagId: String,
+      status: String,
+      reason: String,
+    }],
     status: { type: String, enum: ['ACTIVE', 'REVOKED'], default: 'ACTIVE' },
     issuedAt: { type: Date, default: Date.now },
   },

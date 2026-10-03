@@ -1,0 +1,134 @@
+{
+  "task": "fraud_content",
+  "model_version": "1.0.0+20261002",
+  "trained_at": "2026-10-02T14:32:15.588805+00:00",
+  "input_type": "text",
+  "label_classes": [
+    "genuine",
+    "generated"
+  ],
+  "positive_class": "generated",
+  "threshold": 0.82,
+  "feature_count": 383621,
+  "metrics": {
+    "validation": {
+      "threshold": 0.82,
+      "precision": 1.0,
+      "recall": 0.901072705601907,
+      "f1": 0.9479623824451411
+    },
+    "test": {
+      "accuracy": 0.963623046875,
+      "macro_precision": 0.9709777950915466,
+      "macro_recall": 0.9556019070321812,
+      "macro_f1": 0.9618247320696107,
+      "weighted_f1": 0.9633216420313522,
+      "pr_auc": 0.9984511492103606,
+      "roc_auc": 0.9987390952441512,
+      "precision_at_threshold": 1.0,
+      "recall_at_threshold": 0.9112038140643623
+    },
+    "baseline_test": {
+      "accuracy": 0.628662109375,
+      "macro_precision": 0.7251020846765528,
+      "macro_recall": 0.5503383444192395,
+      "macro_f1": 0.48133886159750383,
+      "weighted_f1": 0.5312789455898754,
+      "precision": 0.8340425531914893,
+      "recall": 0.11680572109654351,
+      "f1": 0.20491374803972817,
+      "pr_auc": 0.4267015675972381
+    }
+  },
+  "dataset": [
+    {
+      "file": "Training_Essay_Data.csv",
+      "rows_used": 27302,
+      "sha256": "f68515bedeaa2e7a55705430863aaaa3a9b59cffa1b84dbc28eb095f1cb3a75e"
+    }
+  ],
+  "random_state": 42,
+  "python_version": "3.12.10",
+  "sklearn_version": "1.6.1",
+  "joblib_version": "1.4.2",
+  "numpy_version": "2.3.2",
+  "class_counts": {
+    "train": {
+      "total": 19111,
+      "positive": 7829,
+      "negative": 11282
+    },
+    "validation": {
+      "total": 4095,
+      "positive": 1678,
+      "negative": 2417
+    },
+    "test": {
+      "total": 4096,
+      "positive": 1678,
+      "negative": 2418
+    }
+  },
+  "top_features": [
+    {
+      "term": "the",
+      "weight": -7.536996258013133
+    },
+    {
+      "term": "because",
+      "weight": -7.07791732598123
+    },
+    {
+      "term": "would",
+      "weight": -5.048372275476186
+    },
+    {
+      "term": "you",
+      "weight": -4.936974268381304
+    },
+    {
+      "term": "driving",
+      "weight": -4.9099670146529935
+    },
+    {
+      "term": "venus",
+      "weight": -4.832164573649811
+    },
+    {
+      "term": "people",
+      "weight": -4.713433856787839
+    },
+    {
+      "term": "car",
+      "weight": -3.80933391465635
+    },
+    {
+      "term": "they",
+      "weight": -3.7779871736012542
+    },
+    {
+      "term": "is",
+      "weight": -3.7700049938334956
+    },
+    {
+      "term": "was",
+      "weight": -3.7496491944077883
+    },
+    {
+      "term": "have",
+      "weight": -3.5436919967867793
+    },
+    {
+      "term": "important",
+      "weight": 3.376172961617674
+    },
+    {
+      "term": "but",
+      "weight": -3.0936344953951664
+    },
+    {
+      "term": "do",
+      "weight": -3.0332354282065634
+    }
+  ]
+}

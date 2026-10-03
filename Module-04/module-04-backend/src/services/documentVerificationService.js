@@ -9,8 +9,10 @@ const module1Adapter = require('../integration/module1Adapter');
 async function receiveVerificationResult(rawPayload, actorId = 'MODULE_3') {
   const normalized = module3Adapter.normalizePayload(rawPayload);
 
+  const upsertQuery = normalized.flagId ? { flagId: normalized.flagId } : { documentId: normalized.documentId };
+
   const record = await DocumentVerification.findOneAndUpdate(
-    { documentId: normalized.documentId },
+    upsertQuery,
     normalized,
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
@@ -49,4 +51,33 @@ async function getVerificationByDocumentId(documentId) {
   return DocumentVerification.findOne({ documentId });
 }
 
-module.exports = { receiveVerificationResult, getVerificationByDocumentId };
+async function recordReviewResolution({ flagId, status, reason, verifiedBy }) {
+  const record = await DocumentVerification.findOneAndUpdate(
+    { flagId },
+    {
+      verificationStatus: status,
+      resolutionOutcome: status === 'VERIFIED' ? 'CLEARED' : 'CONFIRMED',
+      resolutionNote: reason || '',
+      verifiedBy: verifiedBy || 'INSTITUTION_REVIEWER',
+      verifiedAt: new Date(),
+    },
+    { new: true }
+  );
+  if (!record) {
+    const error = new Error('Review flag not found');
+    error.statusCode = 404;
+    error.errorCode = 'NOT_FOUND';
+    throw error;
+  }
+
+  await auditService.record({
+    actorId: verifiedBy || 'INSTITUTION_REVIEWER',
+    action: 'DOCUMENT_VERIFICATION_REVIEW_RESOLVED',
+    entityType: 'document_verification',
+    entityId: record.documentId,
+    metadata: { flagId, status, resolutionNote: reason || '' },
+  });
+  return record;
+}
+
+module.exports = { receiveVerificationResult, getVerificationByDocumentId, recordReviewResolution };

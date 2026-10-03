@@ -8,13 +8,22 @@
   connection event fires (`sockets/index.js`).
 
 ## Authorization (RBAC + resource-level)
+- `middleware/auth.js` validates signed JWTs and rejects unknown roles; legacy
+  `INSTITUTE` claims are normalized to `INSTITUTION`.
 - Role checks: `middleware/rbac.js` (`requireRole(...)`) gates certificate
-  issuance and document-verification ingestion.
+  issuance and document-verification reads. Module 3 verification callbacks
+  use the shared internal service key, not an end-user account.
+- A company can issue a certificate only for its own internship. Certificate
+  reads and downloads are limited to the student/company participants or an
+  administrator. Document-verification reads are limited to internship
+  participants or an administrator.
 - Resource-level checks (the important ones): every conversation/message
   action re-verifies `conversationService.isParticipant(conversationId, userId)`
-  server-side — both over REST and over Socket.IO — so changing a
-  `conversationId` in a request can never expose another pair's conversation.
-  Denials are written to the audit log.
+  server-side — over REST and Socket.IO, including typing events — so changing
+  a `conversationId` in a request can never expose another pair's conversation.
+  Conversation creation verifies the exact student/company pair from the
+  internship record, and conversation reuse is scoped to that internship.
+  Denials are written to the audit log where applicable.
 
 ## End-to-end encryption (messaging)
 - Implemented with the **Web Crypto API** in `frontend/src/utils/crypto.js`:
@@ -47,7 +56,7 @@
 ## Message & input security
 - Message size capped (5000 chars ciphertext) at both REST and socket layers.
 - `express.json({ limit: '100kb' })` request size cap.
-- Rate limiting: 30 messages/min (messaging), 300 req/15min (general) — `middleware/rateLimiter.js`.
+- Rate limiting: 30 messages/min (messaging), 600 req/15min (general) — `middleware/rateLimiter.js`.
 - `xss` sanitization utility available for any user-supplied text fields outside the encrypted path (e.g. future profile fields).
 - Helmet security headers, CORS restricted to `FRONTEND_URL`/`SOCKET_ORIGIN`.
 
@@ -61,6 +70,8 @@
 ## Secrets management
 - `.env.example` lists every required variable; `.env` is git-ignored.
 - No secret is hard-coded anywhere in source.
+- Production startup rejects short or known development secrets and requires
+  Module 1 live integration for authoritative user/internship checks.
 
 ## IDOR protection
 - Every "get by ID" endpoint (conversations, messages, certificates, document

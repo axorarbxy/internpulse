@@ -11,12 +11,14 @@ class GrievanceEscalator:
 
     def __init__(self, base_url: str | None = None) -> None:
         self.base_url = (base_url or os.getenv("GRIEVANCE_API_URL", "")).rstrip("/")
+        self.service_key = os.getenv("CORE_SERVICE_KEY", "")
         self.tickets: dict[str, EscalationResponse] = {}
 
     async def escalate(self, student_id: str, message: str) -> EscalationResponse:
         if self.base_url:
             try:
-                async with httpx.AsyncClient(timeout=2.0) as client:
+                headers = {"X-Internal-Service-Key": self.service_key} if self.service_key else {}
+                async with httpx.AsyncClient(timeout=2.0, headers=headers) as client:
                     response = await client.post(
                         f"{self.base_url}/grievances",
                         json={

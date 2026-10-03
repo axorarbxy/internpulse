@@ -10,9 +10,15 @@ class SentimentLabel(str, Enum):
     NEGATIVE = "negative"
 
 
+class FeedbackDirection(str, Enum):
+    STUDENT_TO_COMPANY = "STUDENT_TO_COMPANY"
+    COMPANY_TO_STUDENT = "COMPANY_TO_STUDENT"
+
+
 class FeedbackCreate(BaseModel):
     company_id: str = Field(min_length=1)
     student_id: str = Field(min_length=1)
+    direction: FeedbackDirection = FeedbackDirection.STUDENT_TO_COMPANY
     rating: int = Field(ge=1, le=5)
     comment: str = Field(min_length=1, max_length=5000)
 
@@ -21,6 +27,7 @@ class FeedbackRecord(BaseModel):
     feedback_id: str
     company_id: str
     student_id: str
+    direction: FeedbackDirection = FeedbackDirection.STUDENT_TO_COMPANY
     rating: int
     comment: str
     sentiment_score: float = Field(ge=-1.0, le=1.0)

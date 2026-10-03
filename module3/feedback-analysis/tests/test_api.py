@@ -43,3 +43,20 @@ def test_empty_company_has_neutral_score():
     response = client.get("/companies/unknown/score")
     assert response.status_code == 200
     assert response.json()["quality_score"] == 0.5
+
+
+def test_company_review_does_not_change_student_company_quality_score():
+    response = client.post(
+        "/feedback",
+        json={
+            "company_id": "company-separate-directions",
+            "student_id": "student-1",
+            "direction": "COMPANY_TO_STUDENT",
+            "rating": 1,
+            "comment": "Needs more practice with deployment fundamentals.",
+        },
+    )
+    assert response.status_code == 201
+    score = client.get("/companies/company-separate-directions/score").json()
+    assert score["feedback_count"] == 0
+    assert score["quality_score"] == 0.5

@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.sessions.store import SQLiteSessionStore
 
 client = TestClient(app)
 
@@ -37,3 +38,16 @@ def test_manual_escalation_creates_ticket():
     )
     assert response.status_code == 200
     assert response.json()["status"] == "open"
+
+
+def test_chat_history_survives_session_store_recreation(tmp_path):
+    database = tmp_path / "chatbot.sqlite3"
+    store = SQLiteSessionStore(database)
+    session_id = store.new_session_id("student-persisted")
+    store.append("student-persisted", session_id, "user", "How do I apply?")
+    store.append("student-persisted", session_id, "assistant", "Open Browse Internships.")
+
+    messages = SQLiteSessionStore(database).history("student-persisted", session_id)[1]
+
+    assert [message.role for message in messages] == ["user", "assistant"]
+    assert messages[0].content == "How do I apply?"

@@ -4,91 +4,119 @@ import { NavigationContext } from './navigation-context';
 const DEFAULT_NOTIFICATIONS = [
   {
     id: 'n1',
-    title: 'Application Shortlisted! 🎉',
-    description: 'CloudScale Technologies shortlisted your profile for Frontend Developer Intern.',
-    time: '25m ago',
+    title: 'You have been shortlisted',
+    description: 'TechNova Solutions moved your Frontend Developer Intern application to the next stage.',
+    time: 'Today',
     unread: true,
     type: 'success',
   },
   {
     id: 'n2',
-    title: 'Weekly Report Due Soon',
-    description: 'Week 6 progress timesheet must be submitted by Friday, 6:00 PM.',
-    time: '2h ago',
+    title: 'Weekly report due soon',
+    description: 'Submit your Machine Learning Engineer Intern progress report by Friday, 5:00 PM.',
+    time: 'Today',
     unread: true,
     type: 'warning',
   },
   {
     id: 'n3',
-    title: 'Mentor Feedback Received',
-    description: 'Dr. Sarah Jenkins approved your Milestone 2 deliverables with comments.',
+    title: 'Certificate verified',
+    description: 'Your AI Research Intern completion certificate from TechNova Solutions is verified.',
     time: 'Yesterday',
     unread: false,
     type: 'info',
   },
   {
     id: 'n4',
-    title: 'New Recommended Role',
-    description: 'AI Research Intern @ DeepVision matches 94% of your verified skills.',
-    time: '2 days ago',
+    title: 'A role matches your skills',
+    description: 'Data Analytics Intern at TechNova Solutions matches your Python and SQL profile.',
+    time: 'Yesterday',
     unread: false,
     type: 'purple',
   },
 ];
 
-export default function NavigationProvider({ children }) {
-  // Parse initial state from hash if present: e.g. #student/dashboard
-  const parseHash = () => {
-    const hash = window.location.hash.replace(/^#\/?/, '');
-    const storedUser = JSON.parse(window.localStorage.getItem('internpulse_user') || 'null');
-    const storedRole = storedUser?.role?.toLowerCase();
-    if (!hash) return { role: ['student', 'institution', 'company'].includes(storedRole) ? storedRole : 'student', tab: 'dashboard' };
-    const parts = hash.split('/');
-    const role = ['student', 'institution', 'company'].includes(parts[0]) ? parts[0] : 'student';
-    const tab = parts[1] || 'dashboard';
-    return { role, tab };
+const COMPANY_DEFAULT_NOTIFICATIONS = [
+  {
+    id: 'company-n1',
+    title: 'New applicants to review',
+    description: 'Aditya Joshi and Meera Iyer applied to your Backend Engineering and Cloud & DevOps roles.',
+    time: 'Today',
+    unread: true,
+    type: 'info',
+  },
+  {
+    id: 'company-n2',
+    title: 'Interview stage updated',
+    description: 'Priya Sharma is ready for an interview for Frontend Developer Intern.',
+    time: 'Today',
+    unread: true,
+    type: 'success',
+  },
+  {
+    id: 'company-n3',
+    title: 'Intern progress needs review',
+    description: 'Sneha Kulkarni’s AI Research internship has been flagged for a supervisor check-in.',
+    time: 'Yesterday',
+    unread: false,
+    type: 'warning',
+  },
+];
+
+const tabsByRole = {
+  student: ['dashboard', 'browse', 'my-internships', 'analytics', 'profile', 'resume', 'certificates', 'recommendations', 'messages', 'notifications'],
+  institution: ['dashboard', 'monitoring', 'analytics', 'messages', 'notifications'],
+  company: ['dashboard', 'manage', 'applicants', 'progress', 'messages', 'notifications'],
+  admin: ['dashboard'],
+};
+const noAllowedTabs = Object.freeze([]);
+
+export default function NavigationProvider({ children, user }) {
+  const candidateRole = String(user?.role || '').toLowerCase();
+  const role = Object.hasOwn(tabsByRole, candidateRole) ? candidateRole : 'unavailable';
+  const allowedTabs = tabsByRole[role] || noAllowedTabs;
+  const getInitialTab = () => {
+    const [requestedRole, requestedTab] = window.location.hash.replace(/^#\/?/, '').split('/');
+    return requestedRole === role && allowedTabs.includes(requestedTab) ? requestedTab : 'dashboard';
   };
 
-  const initial = parseHash();
-  const [role, setRoleState] = useState(initial.role);
-  const [activeTab, setActiveTabState] = useState(initial.tab);
+  const [activeTab, setActiveTabState] = useState(getInitialTab);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [notifications, setNotifications] = useState(DEFAULT_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState(() => (
+    role === 'company' ? COMPANY_DEFAULT_NOTIFICATIONS : DEFAULT_NOTIFICATIONS
+  ));
+
+  useEffect(() => {
+    const expectedHash = `#${role}/${activeTab}`;
+    if (window.location.hash !== expectedHash) {
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${expectedHash}`);
+    }
+  }, [activeTab, role]);
 
   // Sync state to URL hash
-  const syncHash = useCallback((newRole, newTab) => {
-    window.location.hash = `#${newRole}/${newTab}`;
-  }, []);
-
-  const navigate = useCallback((newRole, newTab) => {
-    setRoleState(newRole);
-    setActiveTabState(newTab);
-    syncHash(newRole, newTab);
-    setIsMobileMenuOpen(false);
-  }, [syncHash]);
-
-  const setRole = useCallback((newRole) => {
-    navigate(newRole, 'dashboard');
-  }, [navigate]);
-
   const setActiveTab = useCallback((newTab) => {
+    if (!allowedTabs.includes(newTab)) return;
     setActiveTabState(newTab);
-    syncHash(role, newTab);
+    window.location.hash = `#${role}/${newTab}`;
     setIsMobileMenuOpen(false);
-  }, [role, syncHash]);
+  }, [allowedTabs, role]);
 
   // Listen to browser back/forward
   useEffect(() => {
     const handleHashChange = () => {
-      const parsed = parseHash();
-      setRoleState(parsed.role);
-      setActiveTabState(parsed.tab);
+      const [requestedRole, requestedTab] = window.location.hash.replace(/^#\/?/, '').split('/');
+      if (requestedRole !== role || !allowedTabs.includes(requestedTab)) {
+        setActiveTabState('dashboard');
+        window.location.hash = `#${role}/dashboard`;
+        return;
+      }
+      setActiveTabState(requestedTab);
     };
 
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
+  }, [allowedTabs, role]);
 
   // Notifications helpers
   const unreadCount = useMemo(() => notifications.filter((n) => n.unread).length, [notifications]);
@@ -107,9 +135,7 @@ export default function NavigationProvider({ children }) {
     () => ({
       role,
       activeTab,
-      setRole,
       setActiveTab,
-      navigate,
       isMobileMenuOpen,
       setIsMobileMenuOpen,
       isNotificationsOpen,
@@ -122,9 +148,7 @@ export default function NavigationProvider({ children }) {
     [
       role,
       activeTab,
-      setRole,
       setActiveTab,
-      navigate,
       isMobileMenuOpen,
       isNotificationsOpen,
       notifications,

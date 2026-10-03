@@ -5,11 +5,20 @@ const { ok, fail } = require('../utils/apiResponse');
 
 async function issue(req, res, next) {
   try {
-    const { internshipId } = req.body;
-    if (!internshipId) return fail(res, 400, 'internshipId is required', 'VALIDATION_ERROR');
+    const { applicationId, overrideReason } = req.body;
+    if (!applicationId) return fail(res, 400, 'applicationId is required', 'VALIDATION_ERROR');
     // Only COMPANY or ADMIN can issue; enforced via requireRole in the route
-    const certificate = await certificateService.issueCertificate(internshipId, req.user.id);
+    const certificate = await certificateService.issueCertificate(applicationId, req.user.id, req.user.role, {
+      overrideReason,
+    });
     return ok(res, certificate, 201);
+  } catch (err) { next(err); }
+}
+
+async function listMine(req, res, next) {
+  try {
+    const certificates = await certificateService.getCertificatesForStudent(String(req.user.id));
+    return ok(res, certificates);
   } catch (err) { next(err); }
 }
 
@@ -19,7 +28,7 @@ async function getOne(req, res, next) {
     if (!certificate) return fail(res, 404, 'Certificate not found', 'NOT_FOUND');
 
     const isOwner = certificate.studentId === req.user.id || certificate.companyId === req.user.id;
-    if (!isOwner && req.user.role !== 'ADMIN' && !['INSTITUTE', 'INSTITUTION'].includes(req.user.role)) {
+    if (!isOwner && req.user.role !== 'ADMIN') {
       return fail(res, 403, 'You are not authorized to view this certificate', 'FORBIDDEN');
     }
     return ok(res, certificate);
@@ -32,7 +41,7 @@ async function download(req, res, next) {
     if (!certificate) return fail(res, 404, 'Certificate not found', 'NOT_FOUND');
 
     const isOwner = certificate.studentId === req.user.id || certificate.companyId === req.user.id;
-    if (!isOwner && req.user.role !== 'ADMIN' && !['INSTITUTE', 'INSTITUTION'].includes(req.user.role)) {
+    if (!isOwner && req.user.role !== 'ADMIN') {
       return fail(res, 403, 'You are not authorized to download this certificate', 'FORBIDDEN');
     }
 
@@ -49,4 +58,4 @@ async function verify(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { issue, getOne, download, verify };
+module.exports = { issue, listMine, getOne, download, verify };

@@ -23,4 +23,14 @@ describe('verifySocketToken', () => {
     const token = jwt.sign({ userId: 'u1' }, process.env.JWT_SECRET);
     expect(() => verifySocketToken(token)).toThrow();
   });
+
+  test('rejects unknown roles even when the token signature is valid', () => {
+    const token = jwt.sign({ userId: 'u1', role: 'SUPERUSER' }, process.env.JWT_SECRET);
+    expect(() => verifySocketToken(token)).toThrow('Token has no valid user role');
+  });
+
+  test('normalizes the legacy INSTITUTE role', () => {
+    const token = jwt.sign({ userId: 'u1', role: 'INSTITUTE' }, process.env.JWT_SECRET);
+    expect(verifySocketToken(token)).toEqual({ id: 'u1', role: 'INSTITUTION' });
+  });
 });

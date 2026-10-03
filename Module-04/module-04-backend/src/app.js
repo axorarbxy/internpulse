@@ -1,6 +1,7 @@
 // INTERNAL MODULE 4 FUNCTIONALITY — Express app assembly
 const express = require('express');
 const cors = require('cors');
+const mongoose = require('mongoose');
 const helmet = require('helmet');
 const config = require('./config/env');
 const routes = require('./routes');
@@ -14,7 +15,15 @@ app.use(cors({ origin: config.frontendUrl, credentials: true }));
 app.use(express.json({ limit: '100kb' })); // request size limit
 app.use(generalLimiter);
 
-app.get('/health', (req, res) => res.json({ success: true, module: 'module-4', status: 'ok' }));
+app.get('/health', (req, res) => {
+	const databaseReady = mongoose.connection.readyState === 1;
+	return res.status(databaseReady ? 200 : 503).json({
+		success: databaseReady,
+		module: 'module-4',
+		status: databaseReady ? 'ok' : 'degraded',
+		dependencies: { mongodb: databaseReady ? 'online' : 'offline' },
+	});
+});
 
 app.use('/api', routes);
 

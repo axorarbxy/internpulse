@@ -1,7 +1,5 @@
 from datetime import datetime
-
-import numpy as np
-from sklearn.ensemble import IsolationForest
+import statistics
 
 from app.models.schemas import ActivityEvent
 
@@ -19,16 +17,28 @@ class ActivityAnomalyDetector:
         ordered = sorted(events, key=lambda event: event.timestamp)
         features = []
         intervals = []
+        progress_values = []
         for index, event in enumerate(ordered):
             interval = 0.0 if index == 0 else max(0.0, (event.timestamp - ordered[index - 1].timestamp).total_seconds() / 60)
             intervals.append(interval)
+            progress_values.append(event.progress_percent)
             features.append([interval, event.duration_minutes, event.progress_percent])
         anomalies: list[str] = []
         isolation_ratio = 0.0
         if len(features) >= 5:
-            model = IsolationForest(contamination="auto", random_state=42)
-            labels = model.fit_predict(np.asarray(features, dtype=float))
-            isolation_ratio = float(np.mean(labels == -1))
+            interval_median = statistics.median(intervals)
+            progress_median = statistics.median(progress_values)
+            interval_sigma = statistics.pstdev(intervals) if len(intervals) > 1 else 0.0
+            progress_sigma = statistics.pstdev(progress_values) if len(progress_values) > 1 else 0.0
+
+            unusual_points = 0
+            for interval, progress in zip(intervals, progress_values):
+                if abs(interval - interval_median) > max(1.0, 1.5 * interval_sigma):
+                    unusual_points += 1
+                if abs(progress - progress_median) > max(5.0, 1.5 * progress_sigma):
+                    unusual_points += 1
+
+            isolation_ratio = unusual_points / max(len(features) * 2, 1)
             if isolation_ratio >= 0.4:
                 anomalies.append("activity feature pattern contains multiple statistical outliers")
         span_minutes = (ordered[-1].timestamp - ordered[0].timestamp).total_seconds() / 60

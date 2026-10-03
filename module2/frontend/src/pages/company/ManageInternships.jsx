@@ -1,48 +1,16 @@
-import { useState } from 'react';
-import { IconBriefcase } from '../../components/common/Icons';
-
-const initialInternships = [
-  {
-    id: 1,
-    title: 'Machine Learning Intern',
-    department: 'AI / ML',
-    location: 'Pune',
-    type: 'Full-time',
-    stipend: '₹25,000 / month',
-    duration: '6 Months',
-    applicants: 48,
-    status: 'Published',
-  },
-  {
-    id: 2,
-    title: 'Frontend Developer Intern',
-    department: 'Engineering',
-    location: 'Remote',
-    type: 'Full-time',
-    stipend: '₹20,000 / month',
-    duration: '4 Months',
-    applicants: 36,
-    status: 'Published',
-  },
-  {
-    id: 3,
-    title: 'Data Analytics Intern',
-    department: 'Analytics',
-    location: 'Mumbai',
-    type: 'Full-time',
-    stipend: '₹22,000 / month',
-    duration: '6 Months',
-    applicants: 29,
-    status: 'Draft',
-  },
-];
+import { useEffect, useState } from 'react';
+import { IconBriefcase, IconSearch } from '../../components/common/Icons';
+import companyService from '../../services/companyService';
 
 export default function ManageInternships() {
-  const [internships, setInternships] = useState(initialInternships);
+  const [internships, setInternships] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
 
   const [formData, setFormData] = useState({
     title: '',
@@ -51,9 +19,24 @@ export default function ManageInternships() {
     type: 'Full-time',
     stipend: '',
     duration: '',
+    status: 'Published',
     eligibility: '',
+    requiredSkills: '',
     description: '',
   });
+
+  const refreshInternships = async () => {
+    setInternships(await companyService.getInternships());
+  };
+
+  useEffect(() => {
+    let isActive = true;
+    companyService.getInternships()
+      .then((records) => { if (isActive) setInternships(records); })
+      .catch((requestError) => { if (isActive) setError(requestError.message || 'Unable to load postings.'); })
+      .finally(() => { if (isActive) setLoading(false); });
+    return () => { isActive = false; };
+  }, []);
 
   const resetForm = () => {
     setFormData({
@@ -63,7 +46,9 @@ export default function ManageInternships() {
       type: 'Full-time',
       stipend: '',
       duration: '',
+      status: 'Published',
       eligibility: '',
+      requiredSkills: '',
       description: '',
     });
     setEditingId(null);
@@ -77,7 +62,7 @@ export default function ManageInternships() {
     });
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     if (!formData.title || !formData.department || !formData.location) {
@@ -85,43 +70,17 @@ export default function ManageInternships() {
       return;
     }
 
-    if (editingId) {
-      setInternships(
-        internships.map((internship) =>
-          internship.id === editingId
-            ? {
-                ...internship,
-                title: formData.title,
-                department: formData.department,
-                location: formData.location,
-                type: formData.type,
-                stipend: formData.stipend || 'Not specified',
-                duration: formData.duration || 'Not specified',
-              }
-            : internship
-        )
-      );
-
-      alert('Internship updated successfully.');
-    } else {
-      const newInternship = {
-        id: Date.now(),
-        title: formData.title,
-        department: formData.department,
-        location: formData.location,
-        type: formData.type,
-        stipend: formData.stipend || 'Not specified',
-        duration: formData.duration || 'Not specified',
-        applicants: 0,
-        status: 'Draft',
-      };
-
-      setInternships([...internships, newInternship]);
-
-      alert('Internship created successfully.');
+    setError('');
+    setNotice('');
+    try {
+      if (editingId) await companyService.updateInternship(editingId, formData);
+      else await companyService.createInternship(formData);
+      await refreshInternships();
+      setNotice(editingId ? 'Internship updated.' : 'Internship created and published.');
+      resetForm();
+    } catch (requestError) {
+      setError(requestError.message || 'Unable to save internship.');
     }
-
-    resetForm();
   };
 
   const handleEdit = (internship) => {
@@ -132,7 +91,9 @@ export default function ManageInternships() {
       type: internship.type,
       stipend: internship.stipend,
       duration: internship.duration,
-      eligibility: '',
+      status: internship.status,
+      eligibility: internship.eligibility || '',
+      requiredSkills: internship.skills_required || '',
       description: '',
     });
 
@@ -140,32 +101,28 @@ export default function ManageInternships() {
     setShowForm(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     const confirmed = window.confirm(
       'Are you sure you want to archive this internship?'
     );
 
     if (confirmed) {
-      setInternships(
-        internships.map((internship) =>
-          internship.id === id
-            ? { ...internship, status: 'Archived' }
-            : internship
-        )
-      );
+      try {
+        await companyService.updateInternship(id, { status: 'Closed' });
+        await refreshInternships();
+      } catch (requestError) {
+        setError(requestError.message || 'Unable to close posting.');
+      }
     }
   };
 
-  const handlePublish = (id) => {
-    setInternships(
-      internships.map((internship) =>
-        internship.id === id
-          ? { ...internship, status: 'Published' }
-          : internship
-      )
-    );
-
-    alert('Internship published successfully.');
+  const handlePublish = async (id) => {
+    try {
+      await companyService.updateInternship(id, { status: 'Published' });
+      await refreshInternships();
+    } catch (requestError) {
+      setError(requestError.message || 'Unable to publish posting.');
+    }
   };
 
   const filteredInternships = internships.filter((internship) => {
@@ -180,7 +137,7 @@ export default function ManageInternships() {
   });
 
   return (
-    <div className="page-container manage-internships">
+    <div className="page-container company-dashboard manage-internships">
       {/* Header */}
       <div className="page-header">
         <div>
@@ -192,7 +149,8 @@ export default function ManageInternships() {
         </div>
 
         <button
-          className="primary-button"
+          type="button"
+          className="primary-button manage-create-button"
           onClick={() => {
             setEditingId(null);
             setShowForm(true);
@@ -202,8 +160,11 @@ export default function ManageInternships() {
         </button>
       </div>
 
+      {error && <div className="alert alert-danger" role="alert">{error}</div>}
+      {notice && <div className="alert" role="status">{notice}</div>}
+
       {/* Overview */}
-      <div className="profile-card">
+      <div className="profile-card manage-overview-card">
         <div className="profile-avatar">
           <IconBriefcase size={34} />
         </div>
@@ -219,14 +180,14 @@ export default function ManageInternships() {
       </div>
 
       {/* KPI Cards */}
-      <div className="stats-grid">
-        <div className="stat-card">
+      <div className="stats-grid manage-kpi-grid">
+        <div className="stat-card manage-kpi-card">
           <span className="stat-label">Total Postings</span>
           <strong className="stat-value">{internships.length}</strong>
           <span className="stat-subtitle">All internship records</span>
         </div>
 
-        <div className="stat-card">
+        <div className="stat-card manage-kpi-card">
           <span className="stat-label">Published</span>
           <strong className="stat-value">
             {internships.filter((item) => item.status === 'Published').length}
@@ -234,15 +195,15 @@ export default function ManageInternships() {
           <span className="stat-subtitle">Currently visible to students</span>
         </div>
 
-        <div className="stat-card">
-          <span className="stat-label">Drafts</span>
+        <div className="stat-card manage-kpi-card">
+          <span className="stat-label">Closed</span>
           <strong className="stat-value">
-            {internships.filter((item) => item.status === 'Draft').length}
+            {internships.filter((item) => item.status === 'Closed').length}
           </strong>
-          <span className="stat-subtitle">Ready to publish</span>
+          <span className="stat-subtitle">Not currently visible to students</span>
         </div>
 
-        <div className="stat-card">
+        <div className="stat-card manage-kpi-card">
           <span className="stat-label">Total Applicants</span>
           <strong className="stat-value">
             {internships.reduce(
@@ -256,7 +217,7 @@ export default function ManageInternships() {
 
       {/* Create / Edit Form */}
       {showForm && (
-        <div className="profile-section">
+        <div className="profile-section manage-section-card">
           <div className="section-title">
             <h3>{editingId ? 'Edit Internship' : 'Create Internship'}</h3>
             <p>
@@ -349,6 +310,17 @@ export default function ManageInternships() {
               </div>
 
               <div className="form-group">
+                <label htmlFor="requiredSkills">Required Skills</label>
+                <input
+                  id="requiredSkills"
+                  name="requiredSkills"
+                  value={formData.requiredSkills}
+                  onChange={handleChange}
+                  placeholder="e.g. Python, SQL, React"
+                />
+              </div>
+
+              <div className="form-group">
                 <label htmlFor="description">Job Description</label>
                 <textarea
                   id="description"
@@ -379,38 +351,42 @@ export default function ManageInternships() {
       )}
 
       {/* Search and Filters */}
-      <div className="profile-section">
+      <div className="profile-section manage-section-card">
         <div className="section-title">
           <h3>Internship Listings</h3>
           <p>Search and manage all internship opportunities</p>
         </div>
 
-        <div className="filter-row">
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search internship or department..."
-          />
+        <div className="manage-filter-row">
+          <label className="manage-search-field">
+            <IconSearch size={17} aria-hidden="true" />
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search internship or department"
+              aria-label="Search internship listings"
+            />
+          </label>
 
-          {['All', 'Published', 'Draft', 'Archived'].map((status) => (
-            <button
-              key={status}
-              className={
-                statusFilter === status
-                  ? 'primary-button'
-                  : 'secondary-button'
-              }
-              onClick={() => setStatusFilter(status)}
-            >
-              {status}
-            </button>
-          ))}
+          <div className="manage-filter-tabs" role="group" aria-label="Filter listings by status">
+            {['All', 'Published', 'Closed'].map((status) => (
+              <button
+                key={status}
+                type="button"
+                className={`manage-filter-tab${statusFilter === status ? ' active' : ''}`}
+                aria-pressed={statusFilter === status}
+                onClick={() => setStatusFilter(status)}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Table */}
-        <div className="table-wrapper">
-          <table className="data-table">
+        <div className="table-wrapper manage-table-wrap">
+          <table className="data-table manage-table">
             <thead>
               <tr>
                 <th>Internship</th>
@@ -424,7 +400,9 @@ export default function ManageInternships() {
             </thead>
 
             <tbody>
-              {filteredInternships.length > 0 ? (
+              {loading ? (
+                <tr><td colSpan="7">Loading company postings...</td></tr>
+              ) : filteredInternships.length > 0 ? (
                 filteredInternships.map((internship) => (
                   <tr key={internship.id}>
                     <td>
@@ -442,7 +420,7 @@ export default function ManageInternships() {
                     <td>{internship.applicants}</td>
 
                     <td>
-                      <span className="status-badge">
+                      <span className={`manage-status-badge status-${internship.status.toLowerCase()}`}>
                         {internship.status}
                       </span>
                     </td>
@@ -456,16 +434,16 @@ export default function ManageInternships() {
                           Edit
                         </button>
 
-                        {internship.status === 'Draft' && (
+                        {internship.status === 'Closed' && (
                           <button
                             className="primary-button"
                             onClick={() => handlePublish(internship.id)}
                           >
-                            Publish
+                            Reopen
                           </button>
                         )}
 
-                        {internship.status !== 'Archived' && (
+                        {internship.status !== 'Closed' && (
                           <button
                             className="secondary-button"
                             onClick={() => handleDelete(internship.id)}

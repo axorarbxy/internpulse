@@ -75,7 +75,7 @@ export default function StudentAnalytics() {
     return (
       <div className="loading-container">
         <div className="spinner" />
-        <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: '15.4px' }}>
           Loading student analytics & visualizations...
         </p>
       </div>
@@ -218,15 +218,15 @@ export default function StudentAnalytics() {
                 <AreaChart data={filteredTimeline} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorApps" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="#4f46e5" stopOpacity={0.0} />
+                      <stop offset="5%" stopColor="#0f3c65" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#0f3c65" stopOpacity={0.0} />
                     </linearGradient>
                     <linearGradient id="colorShortlist" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.0} />
+                      <stop offset="5%" stopColor="#245c84" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#245c84" stopOpacity={0.0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e8ddb0" vertical={false} />
                   <XAxis dataKey="month" stroke="#94a3b8" fontSize={12} tickLine={false} />
                   <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} allowDecimals={false} />
                   <Tooltip
@@ -247,12 +247,12 @@ export default function StudentAnalytics() {
                       return null;
                     }}
                   />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '13.2px', paddingTop: '10px' }} />
                   <Area
                     type="monotone"
                     dataKey="applications"
                     name="Applications"
-                    stroke="#4f46e5"
+                    stroke="#0f3c65"
                     strokeWidth={2.5}
                     fillOpacity={1}
                     fill="url(#colorApps)"
@@ -261,7 +261,7 @@ export default function StudentAnalytics() {
                     type="monotone"
                     dataKey="shortlisted"
                     name="Shortlisted"
-                    stroke="#8b5cf6"
+                    stroke="#245c84"
                     strokeWidth={2.5}
                     fillOpacity={1}
                     fill="url(#colorShortlist)"
@@ -289,7 +289,7 @@ export default function StudentAnalytics() {
           subtitle="Current breakdown of all submitted internship applications"
           action={
             <Badge variant="purple" size="sm">
-              24 Total
+              {summary.totalApplications} Total
             </Badge>
           }
         >
@@ -336,7 +336,7 @@ export default function StudentAnalytics() {
                   verticalAlign="bottom"
                   layout="horizontal"
                   iconType="circle"
-                  wrapperStyle={{ fontSize: '12px', paddingTop: '12px' }}
+                  wrapperStyle={{ fontSize: '13.2px', paddingTop: '12px' }}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -349,17 +349,17 @@ export default function StudentAnalytics() {
         {/* Weekly Internship Hours Progress */}
         <DashboardCard
           title="Internship Hours Progress"
-          subtitle="Weekly verified hours logged vs weekly institutional target"
+          subtitle="Demo timesheet hours logged against your weekly target"
           action={
             <Badge variant="success" size="sm">
-              195 / 320 hrs
+              {summary.totalHoursLogged} / {summary.requiredHours} hrs
             </Badge>
           }
         >
           <div className="chart-card-body" style={{ height: 320 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={weeklyHoursProgress} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e8ddb0" vertical={false} />
                 <XAxis dataKey="week" stroke="#94a3b8" fontSize={12} tickLine={false} />
                 <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} />
                 <Tooltip
@@ -380,7 +380,7 @@ export default function StudentAnalytics() {
                     return null;
                   }}
                 />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '13.2px', paddingTop: '10px' }} />
                 <Bar
                   dataKey="loggedHours"
                   name="Hours Logged"
@@ -402,8 +402,8 @@ export default function StudentAnalytics() {
 
         {/* Skills Proficiency vs Benchmark (Bar Chart) */}
         <DashboardCard
-          title="Skills Assessment vs Benchmark"
-          subtitle="Student verified skill ratings compared against industry benchmark (0-100)"
+          title="Self-reported Skills"
+          subtitle="Profile skill levels shown on a demo 0–100 scale"
           action={
             <Badge variant="primary" size="sm">
               Assessment
@@ -417,7 +417,7 @@ export default function StudentAnalytics() {
                 layout="vertical"
                 margin={{ top: 5, right: 20, left: 30, bottom: 0 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e8ddb0" horizontal={false} />
                 <XAxis type="number" domain={[0, 100]} stroke="#94a3b8" fontSize={11} tickLine={false} />
                 <YAxis
                   type="category"
@@ -445,11 +445,11 @@ export default function StudentAnalytics() {
                     return null;
                   }}
                 />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '13.2px', paddingTop: '10px' }} />
                 <Bar
                   dataKey="studentScore"
                   name="Student Rating"
-                  fill="#4f46e5"
+                  fill="#0f3c65"
                   radius={[0, 4, 4, 0]}
                   barSize={12}
                 />

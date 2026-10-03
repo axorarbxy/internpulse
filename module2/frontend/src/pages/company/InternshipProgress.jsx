@@ -1,81 +1,116 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { IconCheckCircle } from '../../components/common/Icons';
-
-const initialInterns = [
-  {
-    id: 1,
-    name: 'Aarav Patil',
-    role: 'Machine Learning Intern',
-    mentor: 'Rahul Mehta',
-    startDate: '01 Aug 2026',
-    progress: 82,
-    hours: 142,
-    tasks: 18,
-    completedTasks: 15,
-    evaluation: 'Excellent',
-    status: 'On Track',
-  },
-  {
-    id: 2,
-    name: 'Priya Sharma',
-    role: 'Frontend Developer Intern',
-    mentor: 'Neha Joshi',
-    startDate: '05 Aug 2026',
-    progress: 74,
-    hours: 128,
-    tasks: 20,
-    completedTasks: 15,
-    evaluation: 'Good',
-    status: 'On Track',
-  },
-  {
-    id: 3,
-    name: 'Rohan Deshmukh',
-    role: 'Data Analytics Intern',
-    mentor: 'Amit Kulkarni',
-    startDate: '10 Aug 2026',
-    progress: 61,
-    hours: 104,
-    tasks: 18,
-    completedTasks: 11,
-    evaluation: 'Needs Review',
-    status: 'Attention',
-  },
-  {
-    id: 4,
-    name: 'Sneha Kulkarni',
-    role: 'AI Research Intern',
-    mentor: 'Priya Nair',
-    startDate: '01 Aug 2026',
-    progress: 91,
-    hours: 158,
-    tasks: 22,
-    completedTasks: 20,
-    evaluation: 'Excellent',
-    status: 'On Track',
-  },
-];
+import companyService from '../../services/companyService';
 
 export default function InternshipProgress() {
-  const [interns, setInterns] = useState(initialInterns);
+  const [interns, setInterns] = useState([]);
+  const [completedInterns, setCompletedInterns] = useState([]);
   const [statusFilter, setStatusFilter] = useState('All');
   const [selectedIntern, setSelectedIntern] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [issuingCertificateId, setIssuingCertificateId] = useState('');
+
+  useEffect(() => {
+    let isActive = true;
+    companyService.getApplications().then((applications) => {
+      if (!isActive) return;
+      const mapIntern = (application) => {
+        const tracking = application.progressData || {};
+        const progress = Number(tracking.progress || 0);
+        const tasks = Number(tracking.tasks || 18);
+        return {
+          id: application.id,
+          name: application.name,
+          role: application.title,
+          mentor: tracking.mentor || 'Mentor to be assigned',
+          startDate: application.start_date
+            ? new Date(application.start_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+            : 'Not specified',
+          progress,
+          hours: Number(tracking.hours || 0),
+          tasks,
+          completedTasks: Number(tracking.completedTasks ?? Math.round((progress / 100) * tasks)),
+          evaluation: tracking.evaluation || (progress < 50 ? 'Needs Review' : 'Good'),
+          status: tracking.status || (progress < 50 ? 'Attention' : 'On Track'),
+          applicationStatus: application.status,
+          certificateId: tracking.certificateId || '',
+        };
+      };
+      setInterns(applications.filter((application) => application.status === 'Active').map(mapIntern));
+      setCompletedInterns(applications.filter((application) => application.status === 'Completed').map(mapIntern));
+    }).catch((requestError) => {
+      if (isActive) setError(requestError.message || 'Unable to load intern progress.');
+    }).finally(() => {
+      if (isActive) setLoading(false);
+    });
+    return () => { isActive = false; };
+  }, []);
 
   const filteredInterns =
     statusFilter === 'All'
       ? interns
       : interns.filter((intern) => intern.status === statusFilter);
 
-  const updateEvaluation = (id, evaluation) => {
-    setInterns(
-      interns.map((intern) =>
-        intern.id === id
-          ? { ...intern, evaluation }
-          : intern
-      )
-    );
+  const updateEvaluation = async (id, evaluation) => {
+    setError('');
+    try {
+      await companyService.updateProgress(id, { evaluation });
+      setInterns((previous) => previous.map((intern) => (
+        intern.id === id ? { ...intern, evaluation } : intern
+      )));
+      setSelectedIntern((previous) => previous?.id === id ? { ...previous, evaluation } : previous);
+      setNotice(`Evaluation saved as ${evaluation}.`);
+    } catch (requestError) {
+      setError(requestError.message || 'Unable to save evaluation.');
+    }
+  };
 
-    alert(`Evaluation updated to ${evaluation}.`);
+  const approveNextTask = async (intern) => {
+    const completedTasks = Math.min(intern.tasks, intern.completedTasks + 1);
+    setError('');
+    try {
+      await companyService.updateProgress(intern.id, { completedTasks });
+      const updated = { ...intern, completedTasks };
+      setInterns((previous) => previous.map((item) => item.id === intern.id ? updated : item));
+      setSelectedIntern(updated);
+      setNotice(`Weekly task approved for ${intern.name}.`);
+    } catch (requestError) {
+      setError(requestError.message || 'Unable to approve weekly task.');
+    }
+  };
+
+  const completeInternship = async (intern) => {
+    setError('');
+    try {
+      await companyService.updateApplicationStatus(intern.id, 'Completed');
+      const completed = { ...intern, applicationStatus: 'Completed' };
+      setInterns((previous) => previous.filter((item) => item.id !== intern.id));
+      setCompletedInterns((previous) => [completed, ...previous.filter((item) => item.id !== intern.id)]);
+      setSelectedIntern(null);
+      setNotice(`Internship marked complete for ${intern.name}.`);
+    } catch (requestError) {
+      setError(requestError.message || 'Unable to complete this internship.');
+    }
+  };
+
+  const issueCertificate = async (intern) => {
+    setIssuingCertificateId(intern.id);
+    setError('');
+    setNotice('');
+    try {
+      const response = await companyService.issueCertificate(intern.id);
+      const certificate = response.data || response.certificate || response;
+      setCompletedInterns((previous) => previous.map((item) => (
+        item.id === intern.id ? { ...item, certificateId: certificate.certificateId } : item
+      )));
+      setNotice(`Signed certificate ${certificate.certificateId} is ready for ${intern.name}.`);
+    } catch (requestError) {
+      setError(requestError.message || 'Unable to issue signed certificate.');
+    } finally {
+      setIssuingCertificateId('');
+    }
   };
 
   const onTrackCount = interns.filter(
@@ -100,7 +135,7 @@ export default function InternshipProgress() {
   );
 
   return (
-    <div className="page-container internship-progress">
+    <div className="page-container company-dashboard internship-progress">
       {/* Header */}
       <div className="page-header">
         <div>
@@ -112,8 +147,11 @@ export default function InternshipProgress() {
         </div>
       </div>
 
+      {error && <div className="alert alert-danger" role="alert">{error}</div>}
+      {notice && <div className="alert" role="status">{notice}</div>}
+
       {/* Overview */}
-      <div className="profile-card">
+      <div className="profile-card intern-progress-overview">
         <div className="profile-avatar">
           <IconCheckCircle size={34} />
         </div>
@@ -129,7 +167,7 @@ export default function InternshipProgress() {
       </div>
 
       {/* KPI Cards */}
-      <div className="stats-grid">
+      <div className="stats-grid intern-progress-kpis">
         <div className="stat-card">
           <span className="stat-label">Active Interns</span>
           <strong className="stat-value">{interns.length}</strong>
@@ -157,7 +195,7 @@ export default function InternshipProgress() {
 
       {/* Monitoring Alerts */}
       {attentionCount > 0 && (
-        <div className="profile-section">
+        <div className="profile-section intern-progress-section">
           <div className="section-title">
             <h3>Monitoring Alerts</h3>
             <p>Interns requiring additional attention</p>
@@ -167,7 +205,7 @@ export default function InternshipProgress() {
             {interns
               .filter((intern) => intern.status === 'Attention')
               .map((intern) => (
-                <div className="activity-item" key={intern.id}>
+                <div className="activity-item intern-alert-item" key={intern.id}>
                   <div className="activity-dot" />
 
                   <div>
@@ -179,7 +217,8 @@ export default function InternshipProgress() {
                   </div>
 
                   <button
-                    className="secondary-button"
+                    type="button"
+                    className="intern-review-button"
                     onClick={() => setSelectedIntern(intern)}
                   >
                     Review
@@ -191,21 +230,19 @@ export default function InternshipProgress() {
       )}
 
       {/* Filters */}
-      <div className="profile-section">
+      <div className="profile-section intern-progress-section">
         <div className="section-title">
           <h3>Intern Monitoring</h3>
           <p>Track progress and evaluation status for active interns</p>
         </div>
 
-        <div className="filter-row">
+        <div className="intern-status-filters" role="group" aria-label="Filter interns by status">
           {['All', 'On Track', 'Attention'].map((status) => (
             <button
               key={status}
-              className={
-                statusFilter === status
-                  ? 'primary-button'
-                  : 'secondary-button'
-              }
+              type="button"
+              className={`intern-status-filter${statusFilter === status ? ' active' : ''}`}
+              aria-pressed={statusFilter === status}
               onClick={() => setStatusFilter(status)}
             >
               {status}
@@ -214,8 +251,8 @@ export default function InternshipProgress() {
         </div>
 
         {/* Intern Table */}
-        <div className="table-wrapper">
-          <table className="data-table">
+        <div className="table-wrapper intern-progress-table-wrap">
+          <table className="data-table intern-progress-table">
             <thead>
               <tr>
                 <th>Intern</th>
@@ -231,6 +268,7 @@ export default function InternshipProgress() {
             </thead>
 
             <tbody>
+              {loading && <tr><td colSpan="9">Loading active interns...</td></tr>}
               {filteredInterns.map((intern) => (
                 <tr key={intern.id}>
                   <td>
@@ -244,7 +282,12 @@ export default function InternshipProgress() {
                   <td>{intern.mentor}</td>
 
                   <td>
-                    <strong>{intern.progress}%</strong>
+                    <div className="intern-progress-cell">
+                      <div className="intern-progress-track" aria-label={`${intern.progress}% complete`}>
+                        <span style={{ width: `${intern.progress}%` }} />
+                      </div>
+                      <strong>{intern.progress}%</strong>
+                    </div>
                   </td>
 
                   <td>{intern.hours}</td>
@@ -254,20 +297,21 @@ export default function InternshipProgress() {
                   </td>
 
                   <td>
-                    <span className="status-badge">
+                    <span className={`intern-evaluation-badge evaluation-${intern.evaluation.toLowerCase().replaceAll(' ', '-')}`}>
                       {intern.evaluation}
                     </span>
                   </td>
 
                   <td>
-                    <span className="status-badge">
+                    <span className={`intern-status-badge status-${intern.status.toLowerCase().replaceAll(' ', '-')}`}>
                       {intern.status}
                     </span>
                   </td>
 
                   <td>
                     <button
-                      className="secondary-button"
+                      type="button"
+                      className="intern-review-button"
                       onClick={() => setSelectedIntern(intern)}
                     >
                       Review
@@ -275,19 +319,56 @@ export default function InternshipProgress() {
                   </td>
                 </tr>
               ))}
+              {!loading && filteredInterns.length === 0 && (
+                <tr>
+                  <td colSpan="9" className="intern-empty-cell">No interns match this status.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
+      <div className="profile-section intern-progress-section">
+        <div className="section-title">
+          <h3>Completed Internships</h3>
+          <p>Issue a signed certificate after the application is marked complete.</p>
+        </div>
+        <div className="activity-list">
+          {completedInterns.map((intern) => (
+            <div className="activity-item" key={intern.id}>
+              <div className="activity-dot" />
+              <div>
+                <strong>{intern.name}</strong>
+                <p>{intern.role}</p>
+                {intern.certificateId && (
+                  <a href={`/#/verify/${encodeURIComponent(intern.certificateId)}`} target="_blank" rel="noreferrer">
+                    Verify {intern.certificateId}
+                  </a>
+                )}
+              </div>
+              <button
+                type="button"
+                className="intern-action-button primary"
+                onClick={() => issueCertificate(intern)}
+                disabled={issuingCertificateId === intern.id}
+              >
+                {issuingCertificateId === intern.id ? 'Issuing...' : intern.certificateId ? 'Reopen Certificate' : 'Issue Signed Certificate'}
+              </button>
+            </div>
+          ))}
+          {!completedInterns.length && <p className="monitoring-table-message">No completed internships yet.</p>}
+        </div>
+      </div>
+
       {/* Evaluation Summary */}
-      <div className="profile-section">
+      <div className="profile-section intern-progress-section">
         <div className="section-title">
           <h3>Evaluation Summary</h3>
           <p>Current supervisor assessment distribution</p>
         </div>
 
-        <div className="stats-grid">
+        <div className="stats-grid evaluation-summary-grid">
           <div className="stat-card">
             <span className="stat-label">Excellent</span>
             <strong className="stat-value">
@@ -326,28 +407,29 @@ export default function InternshipProgress() {
 
       {/* Review Modal */}
       {selectedIntern && (
-        <div className="modal-overlay">
-          <div className="modal-card">
+        <div className="intern-review-overlay" onClick={() => setSelectedIntern(null)}>
+          <div className="intern-review-modal" role="dialog" aria-modal="true" aria-labelledby="intern-review-title" onClick={(event) => event.stopPropagation()}>
             <div className="modal-header">
               <div>
-                <h3>{selectedIntern.name}</h3>
+                <h3 id="intern-review-title">{selectedIntern.name}</h3>
                 <p>{selectedIntern.role}</p>
               </div>
 
               <button
-                className="secondary-button"
+                type="button"
+                className="intern-review-button"
                 onClick={() => setSelectedIntern(null)}
               >
                 Close
               </button>
             </div>
 
-            <div className="profile-section">
+            <div className="intern-review-detail-card">
               <div className="section-title">
                 <h3>Internship Details</h3>
               </div>
 
-              <div className="detail-grid">
+              <div className="intern-detail-grid">
                 <div>
                   <span className="detail-label">Mentor</span>
                   <strong>{selectedIntern.mentor}</strong>
@@ -383,32 +465,22 @@ export default function InternshipProgress() {
               </div>
             </div>
 
-            <div className="profile-section">
+            <div className="intern-review-detail-card">
               <div className="section-title">
                 <h3>Supervisor Evaluation</h3>
                 <p>Update the intern's current evaluation</p>
               </div>
 
-              <div className="filter-row">
+              <div className="intern-evaluation-options" role="group" aria-label="Supervisor evaluation">
                 {['Excellent', 'Good', 'Needs Review'].map(
                   (evaluation) => (
                     <button
                       key={evaluation}
-                      className={
-                        selectedIntern.evaluation === evaluation
-                          ? 'primary-button'
-                          : 'secondary-button'
-                      }
+                      type="button"
+                      className={`intern-evaluation-option${selectedIntern.evaluation === evaluation ? ' active' : ''}`}
+                      aria-pressed={selectedIntern.evaluation === evaluation}
                       onClick={() => {
-                        updateEvaluation(
-                          selectedIntern.id,
-                          evaluation
-                        );
-
-                        setSelectedIntern({
-                          ...selectedIntern,
-                          evaluation,
-                        });
+                        updateEvaluation(selectedIntern.id, evaluation);
                       }}
                     >
                       {evaluation}
@@ -418,23 +490,22 @@ export default function InternshipProgress() {
               </div>
             </div>
 
-            <div className="button-row">
+            <div className="intern-review-actions">
               <button
-                className="primary-button"
-                onClick={() =>
-                  alert('Weekly task approval opened.')
-                }
+                type="button"
+                className="intern-action-button primary"
+                onClick={() => approveNextTask(selectedIntern)}
+                disabled={selectedIntern.completedTasks >= selectedIntern.tasks}
               >
                 Approve Weekly Tasks
               </button>
 
               <button
-                className="secondary-button"
-                onClick={() =>
-                  alert('Completion certificate review opened.')
-                }
+                type="button"
+                className="intern-action-button secondary"
+                onClick={() => completeInternship(selectedIntern)}
               >
-                Certificate Review
+                Mark Internship Complete
               </button>
             </div>
           </div>

@@ -8,6 +8,7 @@ class GrievanceReviewClient:
 
     def __init__(self, base_url: str | None = None) -> None:
         self.base_url = (base_url or os.getenv("GRIEVANCE_API_URL", "")).rstrip("/")
+        self.service_key = os.getenv("CORE_SERVICE_KEY", "")
 
     def create_review_case(
         self,
@@ -27,6 +28,7 @@ class GrievanceReviewClient:
                     "description": "\n".join(evidence),
                     "source": source,
                 },
+                headers={"X-Internal-Service-Key": self.service_key} if self.service_key else {},
                 timeout=2.0,
             )
             response.raise_for_status()

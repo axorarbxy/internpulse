@@ -67,7 +67,7 @@ export default function StudentDashboard() {
     return (
       <div className="loading-container">
         <div className="spinner" />
-        <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: '15.4px' }}>
           Loading your student dashboard...
         </p>
       </div>
@@ -86,6 +86,12 @@ export default function StudentDashboard() {
   }
 
   const { profile, stats, activeInternship, deadlines, recentApplications, recommendedInternships } = data;
+  const safeProfileSkills = Array.isArray(profile?.skills) ? profile.skills : [];
+  const safeMilestones = Array.isArray(activeInternship?.milestones) ? activeInternship.milestones : [];
+  const safeDeadlines = Array.isArray(deadlines) ? deadlines : [];
+  const safeRecentApplications = Array.isArray(recentApplications) ? recentApplications : [];
+  const safeRecommendedInternships = Array.isArray(recommendedInternships) ? recommendedInternships : [];
+  const hasActiveInternship = stats.activeInternshipCount > 0;
 
   return (
     <div className="dashboard-page">
@@ -99,8 +105,14 @@ export default function StudentDashboard() {
             </Badge>
           </div>
           <p className="welcome-subtitle">
-            You are currently on track for your graduation internship credits. Your active internship at{' '}
-            <strong>{activeInternship.company}</strong> is {activeInternship.progressPercentage}% complete.
+            {hasActiveInternship ? (
+              <>
+                You are currently on track for your graduation internship credits. Your active internship at{' '}
+                <strong>{activeInternship.company}</strong> is {activeInternship.progressPercentage}% complete.
+              </>
+            ) : (
+              <>Start your internship journey by exploring roles matched to your profile.</>
+            )}
           </p>
 
           <div className="welcome-meta-row">
@@ -119,7 +131,7 @@ export default function StudentDashboard() {
         </div>
 
         <div className="welcome-profile-preview">
-          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', fontSize: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', fontSize: '13.2px' }}>
             <span>Profile Completeness</span>
             <strong>{profile.profileCompleteness}%</strong>
           </div>
@@ -132,7 +144,7 @@ export default function StudentDashboard() {
           <button
             type="button"
             className="btn btn-sm"
-            style={{ color: '#ffffff', border: '1px solid rgba(255,255,255,0.3)', padding: '4px 10px', fontSize: '11px' }}
+            style={{ color: '#ffffff', border: '1px solid rgba(255,255,255,0.3)', padding: '4px 10px', fontSize: '12.1px' }}
             onClick={() => setActiveTab('profile')}
           >
             Complete Profile →
@@ -193,14 +205,18 @@ export default function StudentDashboard() {
           {/* Active Internship Progress */}
           <DashboardCard
             title="Active Internship Progress"
-            subtitle={`${activeInternship.company} • ${activeInternship.role}`}
+            subtitle={hasActiveInternship ? `${activeInternship.company} • ${activeInternship.role}` : 'No internship started yet'}
             action={
-              <Badge variant="success" dot size="sm">
-                Active • Week {activeInternship.currentWeek} of {activeInternship.totalDurationWeeks}
-              </Badge>
+              hasActiveInternship ? (
+                <Badge variant="success" dot size="sm">
+                  Active • Week {activeInternship.currentWeek} of {activeInternship.totalDurationWeeks}
+                </Badge>
+              ) : null
             }
           >
-            <div className="active-internship-header">
+            {hasActiveInternship ? (
+              <>
+                <div className="active-internship-header">
               <div className="internship-company-badge">
                 <div className="company-logo-avatar">{activeInternship.companyLogo}</div>
                 <div className="company-details">
@@ -209,17 +225,17 @@ export default function StudentDashboard() {
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Stipend:</span>
+                <span style={{ fontSize: '13.2px', color: 'var(--text-muted)' }}>Stipend:</span>
                 <p style={{ fontWeight: 700, color: 'var(--color-success-text)' }}>{activeInternship.stipend}</p>
               </div>
-            </div>
+              </div>
 
             {/* Quick Metrics Bar */}
-            <div className="internship-summary-metrics">
+              <div className="internship-summary-metrics">
               <div className="metric-box">
                 <span className="metric-box-label">Timeline Completion</span>
                 <span className="metric-box-value">{activeInternship.progressPercentage}%</span>
-                <div style={{ width: '100%', height: '6px', background: '#e2e8f0', borderRadius: '9999px', overflow: 'hidden', marginTop: '4px' }}>
+                <div style={{ width: '100%', height: '6px', background: '#e8ddb0', borderRadius: '9999px', overflow: 'hidden', marginTop: '4px' }}>
                   <div style={{ height: '100%', width: `${activeInternship.progressPercentage}%`, background: 'var(--color-primary)' }} />
                 </div>
               </div>
@@ -228,21 +244,25 @@ export default function StudentDashboard() {
                 <span className="metric-box-value">
                   {activeInternship.totalHoursCompleted} / {activeInternship.totalHoursRequired} hrs
                 </span>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>61% requirement met</span>
+                <span style={{ fontSize: '12.1px', color: 'var(--text-muted)' }}>
+                  {activeInternship.totalHoursRequired
+                    ? Math.round((activeInternship.totalHoursCompleted / activeInternship.totalHoursRequired) * 100)
+                    : 0}% requirement met
+                </span>
               </div>
               <div className="metric-box">
                 <span className="metric-box-label">Industry Mentor</span>
-                <span className="metric-box-value" style={{ fontSize: '14px' }}>{activeInternship.mentorName}</span>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{activeInternship.mentorRole}</span>
+                <span className="metric-box-value" style={{ fontSize: '15.4px' }}>{activeInternship.mentorName}</span>
+                <span style={{ fontSize: '12.1px', color: 'var(--text-muted)' }}>{activeInternship.mentorRole}</span>
               </div>
-            </div>
+              </div>
 
             {/* Milestones Timeline */}
-            <h4 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '14px' }}>
+              <h4 style={{ fontSize: '14.3px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '14px' }}>
               Project Milestones & Deliverables
-            </h4>
-            <div className="milestones-timeline">
-              {activeInternship.milestones.map((m) => (
+              </h4>
+              <div className="milestones-timeline">
+              {safeMilestones.map((m) => (
                 <div key={m.id} className="milestone-item">
                   <div
                     className={`milestone-status-icon ${
@@ -258,7 +278,7 @@ export default function StudentDashboard() {
                     ) : m.status === 'in-progress' ? (
                       <IconClock size={15} />
                     ) : (
-                      <span style={{ fontSize: '11px', fontWeight: 700 }}>•</span>
+                      <span style={{ fontSize: '12.1px', fontWeight: 700 }}>•</span>
                     )}
                   </div>
                   <div className="milestone-info">
@@ -274,7 +294,22 @@ export default function StudentDashboard() {
                   </div>
                 </div>
               ))}
-            </div>
+                </div>
+              </>
+            ) : (
+              <div className="empty-state">
+                <div className="empty-state-icon">
+                  <IconBriefcase size={25} stroke={1.8} />
+                </div>
+                <div className="empty-state-copy">
+                  <h4>Your internship journey starts here</h4>
+                  <p>Explore opportunities matched to your skills and apply for your first internship.</p>
+                </div>
+                <button type="button" className="btn btn-primary" onClick={() => setActiveTab('browse')}>
+                  Explore Internships <IconArrowRight size={14} />
+                </button>
+              </div>
+            )}
           </DashboardCard>
 
           {/* Recent Applications Table */}
@@ -304,7 +339,17 @@ export default function StudentDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {recentApplications.map((app) => (
+                  {safeRecentApplications.length === 0 && (
+                    <tr>
+                      <td colSpan="6" style={{ textAlign: 'center', padding: '28px' }}>
+                        <p style={{ marginBottom: '10px' }}>No applications yet.</p>
+                        <button type="button" className="btn btn-primary btn-sm" onClick={() => setActiveTab('browse')}>
+                          Find Internships <IconArrowRight size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  )}
+                  {safeRecentApplications.map((app) => (
                     <tr key={app.id}>
                       <td>
                         <div className="table-company-cell">
@@ -313,8 +358,8 @@ export default function StudentDashboard() {
                         </div>
                       </td>
                       <td>
-                        <span style={{ fontSize: '12px' }}>{app.type}</span>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{app.location}</div>
+                        <span style={{ fontSize: '13.2px' }}>{app.type}</span>
+                        <div style={{ fontSize: '12.1px', color: 'var(--text-muted)' }}>{app.location}</div>
                       </td>
                       <td style={{ color: 'var(--text-muted)' }}>{app.appliedDate}</td>
                       <td style={{ fontWeight: 600 }}>{app.stipend}</td>
@@ -327,7 +372,7 @@ export default function StudentDashboard() {
                         <button
                           type="button"
                           className="btn btn-outline btn-sm"
-                          style={{ padding: '3px 8px', fontSize: '11px' }}
+                          style={{ padding: '3px 8px', fontSize: '12.1px' }}
                           onClick={() => setActiveTab('my-internships')}
                         >
                           View
@@ -390,12 +435,13 @@ export default function StudentDashboard() {
             subtitle="Don't miss mandatory milestones"
             action={
               <Badge variant="danger" size="sm">
-                {deadlines.length} Due Soon
+                {safeDeadlines.length} Due Soon
               </Badge>
             }
           >
             <div className="deadlines-list">
-              {deadlines.map((item) => (
+              {safeDeadlines.length === 0 && <p className="empty-state-box">No upcoming deadlines.</p>}
+              {safeDeadlines.map((item) => (
                 <div key={item.id} className={`deadline-card urgent-${item.urgency}`}>
                   <div className="deadline-content">
                     <p className="deadline-title">{item.title}</p>
@@ -404,7 +450,7 @@ export default function StudentDashboard() {
                         <IconCalendar size={13} /> {item.dueDate}
                       </span>
                     </div>
-                    <span style={{ fontSize: '11px', color: 'var(--text-subtle)' }}>{item.company}</span>
+                    <span style={{ fontSize: '12.1px', color: 'var(--text-subtle)' }}>{item.company}</span>
                   </div>
                   <Badge
                     variant={item.urgency === 'high' ? 'danger' : item.urgency === 'medium' ? 'warning' : 'info'}
@@ -448,7 +494,7 @@ export default function StudentDashboard() {
               </div>
               <div className="profile-detail-row">
                 <span className="profile-detail-label">Email</span>
-                <span className="profile-detail-val" style={{ fontSize: '12px' }}>{profile.email}</span>
+                <span className="profile-detail-val" style={{ fontSize: '13.2px' }}>{profile.email}</span>
               </div>
               <div className="profile-detail-row">
                 <span className="profile-detail-label">Current GPA</span>
@@ -461,11 +507,11 @@ export default function StudentDashboard() {
             </div>
 
             <div style={{ marginTop: '12px' }}>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
+              <span style={{ fontSize: '12.1px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
                 Key Verified Skills
               </span>
               <div className="skills-tags-wrap">
-                {profile.skills.map((skill) => (
+                {safeProfileSkills.map((skill) => (
                   <span key={skill} className="skill-tag">
                     {skill}
                   </span>
@@ -489,7 +535,12 @@ export default function StudentDashboard() {
             }
           >
             <div className="recommended-list">
-              {recommendedInternships.map((rec) => (
+              {safeRecommendedInternships.length === 0 && (
+                <div className="empty-state-box">
+                  Complete your profile skills to receive recommendations.
+                </div>
+              )}
+              {safeRecommendedInternships.map((rec) => (
                 <div key={rec.id} className="recommendation-card">
                   <div className="rec-card-header">
                     <div>
@@ -511,8 +562,8 @@ export default function StudentDashboard() {
                   </div>
 
                   <div className="skills-tags-wrap">
-                    {rec.skills.map((sk) => (
-                      <span key={sk} className="skill-tag" style={{ fontSize: '10px' }}>
+                    {(rec.skills || []).map((sk) => (
+                      <span key={sk} className="skill-tag" style={{ fontSize: '11px' }}>
                         {sk}
                       </span>
                     ))}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavigationProvider, useNavigation } from './context';
 import DashboardLayout from './layouts/DashboardLayout';
 import {
@@ -18,11 +18,13 @@ import {
   Applicants,
   InternshipProgress,
 } from './pages';
-import AuthPage from './pages/AuthPage';
-import { getAuthToken } from './services/api';
+import AuthPage from '../../../sign-in/frontend/AuthPage';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import { apiRequest, getAuthToken, setAuthToken } from './services/api';
 import { SocketProvider } from '../../../Module-04/frontend/src/context/SocketContext';
 import MessagesPage from '../../../Module-04/frontend/src/pages/Messages';
 import NotificationsPage from '../../../Module-04/frontend/src/pages/Notifications';
+import VerifyCertificatePage from '../../../Module-04/frontend/src/pages/VerifyCertificate';
 import './App.css';
 
 function MainAppContent() {
@@ -42,6 +44,8 @@ function MainAppContent() {
   })();
 
   const renderContent = () => {
+    if (role === 'admin') return <AdminDashboard />;
+
     if (role === 'student') {
       switch (activeTab) {
         case 'messages':
@@ -112,15 +116,65 @@ function MainAppContent() {
 }
 
 export default function App() {
-  const [authenticated, setAuthenticated] = useState(Boolean(getAuthToken()));
+  const [sessionUser, setSessionUser] = useState(null);
+  const [checkingSession, setCheckingSession] = useState(Boolean(getAuthToken()));
+  const verificationMatch = window.location.hash.match(/^#\/?verify\/([^/]+)$/);
 
-  if (!authenticated) {
-    return <AuthPage onAuthenticated={() => setAuthenticated(true)} />;
+  useEffect(() => {
+    if (!getAuthToken()) return undefined;
+
+    let isActive = true;
+    apiRequest('/auth/me')
+      .then(({ user }) => {
+        if (!isActive) return;
+        window.localStorage.setItem('internpulse_user', JSON.stringify(user));
+        setSessionUser(user);
+      })
+      .catch(() => {
+        if (!isActive) return;
+        setAuthToken(null);
+        window.localStorage.removeItem('internpulse_user');
+        window.localStorage.removeItem('internpulse_student_id');
+        setSessionUser(null);
+      })
+      .finally(() => {
+        if (isActive) setCheckingSession(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  if (verificationMatch) {
+    return <VerifyCertificatePage certificateId={decodeURIComponent(verificationMatch[1])} />;
+  }
+
+  if (checkingSession) {
+    return <div className="loading-container" role="status"><div className="spinner" /><p>Verifying your account...</p></div>;
+  }
+
+  if (!sessionUser) {
+    return <AuthPage onAuthenticated={setSessionUser} />;
+  }
+
+  if (!['STUDENT', 'COMPANY', 'INSTITUTION', 'ADMIN'].includes(sessionUser.role)) {
+    return (
+      <main className="role-workspace-unavailable">
+        <h1>Workspace unavailable</h1>
+        <p>This account does not have a configured portal workspace.</p>
+        <button type="button" className="btn btn-secondary" onClick={() => {
+          setAuthToken(null);
+          window.localStorage.removeItem('internpulse_user');
+          setSessionUser(null);
+        }}>Sign out</button>
+      </main>
+    );
   }
 
   return (
     <SocketProvider token={getAuthToken()}>
-      <NavigationProvider>
+      <NavigationProvider user={sessionUser}>
         <MainAppContent />
       </NavigationProvider>
     </SocketProvider>

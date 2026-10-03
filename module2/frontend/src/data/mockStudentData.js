@@ -227,7 +227,7 @@ export const mockStudentAnalytics = {
   ],
   statusDistribution: [
     { name: 'Pending Review', value: 10, color: '#f59e0b' },
-    { name: 'Shortlisted', value: 7, color: '#8b5cf6' },
+    { name: 'Shortlisted', value: 7, color: '#245c84' },
     { name: 'Offers Extended', value: 3, color: '#10b981' },
     { name: 'Rejected', value: 4, color: '#ef4444' },
   ],

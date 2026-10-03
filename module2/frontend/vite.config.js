@@ -16,9 +16,12 @@ export default defineConfig({
       'socket.io-client': path.resolve(currentDir, 'node_modules/socket.io-client'),
     },
   },
+  build: {
+    chunkSizeWarningLimit: 1200,
+  },
   server: {
     fs: {
-      allow: [path.resolve(currentDir, '../../Module-04/frontend/src')],
+      allow: [currentDir, path.resolve(currentDir, '../../Module-04/frontend/src')],
     },
     proxy: {
       '/api': 'http://localhost:5000',

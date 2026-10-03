@@ -3,14 +3,14 @@ from uuid import uuid4
 
 from app.models.schemas import Grievance, GrievanceCreate, GrievanceStatus
 from app.services.classifier import GrievanceClassifier
-from app.services.repository import InMemoryGrievanceRepository
+from app.services.repository import InMemoryGrievanceRepository, SQLiteGrievanceRepository, create_repository
 from app.services.resolver import ResolutionDraftService
 from app.services.router import GrievanceRouter
 
 
 class GrievanceManager:
-    def __init__(self, repository: InMemoryGrievanceRepository | None = None) -> None:
-        self.repository = repository or InMemoryGrievanceRepository()
+    def __init__(self, repository: InMemoryGrievanceRepository | SQLiteGrievanceRepository | None = None) -> None:
+        self.repository = repository or create_repository()
         self.classifier = GrievanceClassifier()
         self.resolver = ResolutionDraftService()
         self.router = GrievanceRouter()

@@ -1,75 +1,34 @@
+import { useEffect, useState } from 'react';
 import { IconBuilding } from '../../components/common/Icons';
-
-const kpis = [
-  {
-    title: 'Total Students',
-    value: '1,248',
-    subtitle: 'Across all departments',
-  },
-  {
-    title: 'Active Internships',
-    value: '186',
-    subtitle: 'Currently in progress',
-  },
-  {
-    title: 'Students Placed',
-    value: '892',
-    subtitle: 'Current academic year',
-  },
-  {
-    title: 'Industry Partners',
-    value: '74',
-    subtitle: 'Active organizations',
-  },
-];
-
-const departmentData = [
-  {
-    department: 'CSE - AIML',
-    students: 320,
-    internships: 58,
-    completion: 82,
-  },
-  {
-    department: 'Computer Engineering',
-    students: 285,
-    internships: 46,
-    completion: 78,
-  },
-  {
-    department: 'Mechanical Engineering',
-    students: 240,
-    internships: 31,
-    completion: 71,
-  },
-  {
-    department: 'Electronics & Communication',
-    students: 215,
-    internships: 28,
-    completion: 75,
-  },
-];
-
-const activities = [
-  {
-    title: '12 students submitted internship reports',
-    time: 'Today, 10:30 AM',
-  },
-  {
-    title: 'New industry partner registered',
-    time: 'Today, 09:15 AM',
-  },
-  {
-    title: '8 students completed internships',
-    time: 'Yesterday, 04:20 PM',
-  },
-  {
-    title: 'Faculty advisor review completed',
-    time: 'Yesterday, 02:45 PM',
-  },
-];
+import { useNavigation } from '../../context';
+import institutionService from '../../services/institutionService';
 
 export default function InstitutionDashboard() {
+  const { setActiveTab } = useNavigation();
+  const [overview, setOverview] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let isActive = true;
+    institutionService.getOverview()
+      .then((data) => { if (isActive) setOverview(data); })
+      .catch((requestError) => { if (isActive) setError(requestError.message || 'Unable to load institution overview.'); })
+      .finally(() => { if (isActive) setLoading(false); });
+    return () => { isActive = false; };
+  }, []);
+
+  if (loading) return <div className="loading-container" role="status"><div className="spinner" /><p>Loading institution overview...</p></div>;
+  if (!overview) return <div className="alert alert-danger" role="alert">{error || 'Institution overview is unavailable.'}</div>;
+
+  const { institution, summary, departments, activities } = overview;
+  const kpis = [
+    { title: 'Total Students', value: summary.totalStudents, subtitle: 'Assigned to this institution' },
+    { title: 'Active Internships', value: summary.activeInternships, subtitle: 'Currently in progress' },
+    { title: 'Students Placed', value: summary.studentsPlaced, subtitle: 'Active or completed placements' },
+    { title: 'Industry Partners', value: summary.industryPartners, subtitle: 'Represented in this cohort' },
+  ];
+
   return (
     <div className="page-container institution-dashboard">
       <div className="page-header">
@@ -89,10 +48,9 @@ export default function InstitutionDashboard() {
         </div>
 
         <div className="profile-heading">
-          <h3>Institution Overview</h3>
+          <h3>{institution?.institution_name || 'Institution Overview'}</h3>
           <p>
-            Monitor internships, student progress and industry partnerships
-            from one dashboard.
+            {institution?.address || 'Institutional oversight for student placements, progress, and industry partners.'}
           </p>
           <span className="profile-status">Monitoring Active</span>
         </div>
@@ -128,7 +86,7 @@ export default function InstitutionDashboard() {
             </thead>
 
             <tbody>
-              {departmentData.map((item) => (
+              {departments.map((item) => (
                 <tr key={item.department}>
                   <td>
                     <strong>{item.department}</strong>
@@ -162,25 +120,25 @@ export default function InstitutionDashboard() {
 
         <div className="monitoring-grid">
           <div className="monitoring-card">
-            <strong>186</strong>
+            <strong>{summary.activeInternships}</strong>
             <span>Active Internships</span>
             <small>Students currently working</small>
           </div>
 
           <div className="monitoring-card">
-            <strong>94</strong>
+            <strong>{summary.reportsSubmitted}</strong>
             <span>Reports Submitted</span>
             <small>Awaiting faculty review</small>
           </div>
 
           <div className="monitoring-card">
-            <strong>38</strong>
+            <strong>{summary.pendingReviews}</strong>
             <span>Pending Reviews</span>
             <small>Faculty action required</small>
           </div>
 
           <div className="monitoring-card">
-            <strong>74</strong>
+            <strong>{summary.industryPartners}</strong>
             <span>Industry Partners</span>
             <small>Active organizations</small>
           </div>
@@ -216,16 +174,16 @@ export default function InstitutionDashboard() {
         </div>
 
         <div className="quick-actions">
-          <button className="primary-button">
+          <button className="primary-button" onClick={() => setActiveTab('monitoring')}>
             Monitor Students
           </button>
 
-          <button className="secondary-button">
+          <button className="secondary-button" onClick={() => setActiveTab('analytics')}>
             View Analytics
           </button>
 
-          <button className="secondary-button">
-            Manage Industry Partners
+          <button className="secondary-button" onClick={() => setActiveTab('monitoring')}>
+            Review Pending Students
           </button>
         </div>
       </div>

@@ -1,3 +1,3 @@
-const Student=require('../models/Student');
+const Student=require('../models/Student'),User=require('../models/User');
 exports.getProfile=async(req,res)=>{try{res.json({profile:await Student.getByUserId(req.user.id)||null});}catch(e){res.status(500).json({message:'Server error'});}};
-exports.updateProfile=async(req,res)=>{try{res.json({message:'Student profile saved',profile:await Student.upsert(req.user.id,req.body)});}catch(e){res.status(500).json({message:'Server error'});}};
+exports.updateProfile=async(req,res)=>{try{await User.updateProfile(req.user.id,req.body.name,req.body.email);await Student.upsert(req.user.id,req.body);res.json({message:'Student profile saved',profile:await Student.getByUserId(req.user.id)});}catch(e){if(e.code==='23505')return res.status(409).json({message:'Email is already in use'});res.status(500).json({message:'Server error'});}};

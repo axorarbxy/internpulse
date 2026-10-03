@@ -1,27 +1,85 @@
 import { useState, useEffect } from 'react';
-import { IconUser } from '../../components/common/Icons';
+import { IconFileText, IconUser } from '../../components/common/Icons';
 import { studentService } from '../../services';
+import { useNavigation } from '../../context';
+import {
+  demoStudentPreferences,
+  demoStudentProfile,
+  demoStudentProjects,
+  demoStudentResume,
+  demoStudentSkillLevels,
+} from '../../data/demoStudentProfile';
 
 export default function StudentProfile() {
+  const { setActiveTab } = useNavigation();
   const [isEditing, setIsEditing] = useState(false);
+  const [editingSection, setEditingSection] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
+  const [profileBeforeEdit, setProfileBeforeEdit] = useState(null);
 
   const localUser = JSON.parse(window.localStorage.getItem('internpulse_user') || '{}');
+  const savedProfile = (() => {
+    try {
+      return { ...demoStudentProfile, ...JSON.parse(window.localStorage.getItem('internpulse_profile') || '{}') };
+    } catch {
+      return demoStudentProfile;
+    }
+  })();
 
   const [profile, setProfile] = useState({
-    name: localUser.name || 'Student Name',
-    email: localUser.email || 'student@internpulse.com',
+    name: savedProfile.name || localUser.name || 'Student Name',
+    email: savedProfile.email || localUser.email || 'student@internpulse.com',
     phone: '+91 98765 43210',
     studentId: localUser.id ? `STU-${localUser.id}` : 'STU2026-001',
-    branch: 'CSE - AIML',
-    semester: 'Semester 4',
-    college: 'Kolhapur Institute of Technology',
-    location: 'Kolhapur, Maharashtra',
-    skills: 'Python, Java, Machine Learning, React, SQL',
-    github: 'https://github.com/',
-    linkedin: 'https://linkedin.com/',
-    portfolio: 'https://example.com/',
+    branch: demoStudentProfile.branch,
+    semester: demoStudentProfile.semester,
+    college: demoStudentProfile.college,
+    location: demoStudentProfile.location,
+    skills: demoStudentProfile.skills,
+    github: demoStudentProfile.github,
+    linkedin: demoStudentProfile.linkedin,
+    portfolio: demoStudentProfile.portfolio,
+    ...savedProfile,
   });
+
+  const [preferences, setPreferences] = useState(() => {
+    try {
+      return { ...demoStudentPreferences, ...JSON.parse(window.localStorage.getItem('internpulse_profile_preferences') || '{}') };
+    } catch {
+      return demoStudentPreferences;
+    }
+  });
+
+  const [projects, setProjects] = useState(() => {
+    try {
+      return JSON.parse(window.localStorage.getItem('internpulse_profile_projects')) || demoStudentProjects;
+    } catch {
+      return [];
+    }
+  });
+
+  const [skillLevels, setSkillLevels] = useState(() => {
+    try {
+      return { ...demoStudentSkillLevels, ...JSON.parse(window.localStorage.getItem('internpulse_profile_skill_levels') || '{}') };
+    } catch {
+      return demoStudentSkillLevels;
+    }
+  });
+
+  const skillList = profile.skills.split(',').map((skill) => skill.trim()).filter(Boolean);
+  const profileChecks = {
+    personal: Boolean(profile.name && profile.email && profile.phone && profile.location),
+    academic: Boolean(profile.branch && profile.semester && profile.college),
+    skills: skillList.length > 0,
+    projects: projects.length > 0,
+    resume: Boolean(window.localStorage.getItem('internpulse_resume') || demoStudentResume),
+    preferences: Boolean(preferences.targetRoles && preferences.workModes),
+    portfolio: Boolean(profile.github || profile.linkedin || profile.portfolio),
+  };
+  const profileCompleteness = Math.round(
+    (Object.values(profileChecks).filter(Boolean).length / Object.keys(profileChecks).length) * 100,
+  );
 
   useEffect(() => {
     studentService.getStudentProfile().then((data) => {
@@ -49,10 +107,87 @@ export default function StudentProfile() {
     }));
   };
 
+  const handlePreferenceChange = (e) => {
+    const { name, value } = e.target;
+    setPreferences((previous) => ({ ...previous, [name]: value }));
+  };
+
+  const handleProjectChange = (index, field, value) => {
+    setProjects((previous) => previous.map((project, projectIndex) => (
+      projectIndex === index ? { ...project, [field]: value } : project
+    )));
+  };
+
+  const addProject = () => {
+    setProjects((previous) => [...previous, { title: '', description: '', skills: '', url: '' }]);
+    if (!isEditing) {
+      handleStartSectionEditing('projects');
+    }
+  };
+
+  const handleStartEditing = () => {
+    setProfileBeforeEdit({
+      profile: { ...profile },
+      preferences: { ...preferences },
+      projects: projects.map((project) => ({ ...project })),
+      skillLevels: { ...skillLevels },
+    });
+    setSaveMessage('');
+    setIsEditing(true);
+  };
+
+  const handleStartSectionEditing = (section) => {
+    setProfileBeforeEdit({
+      profile: { ...profile },
+      preferences: { ...preferences },
+      projects: projects.map((project) => ({ ...project })),
+      skillLevels: { ...skillLevels },
+    });
+    setSaveMessage('');
+    setEditingSection(section);
+  };
+
+  const handleCancelEditing = () => {
+    if (profileBeforeEdit) {
+      setProfile(profileBeforeEdit.profile);
+      setPreferences(profileBeforeEdit.preferences);
+      setProjects(profileBeforeEdit.projects);
+      setSkillLevels(profileBeforeEdit.skillLevels);
+    }
+    setProfileBeforeEdit(null);
+    setIsEditing(false);
+    setEditingSection(null);
+    setSaveMessage('');
+  };
+
+  const handleSaveSection = async () => {
+    await handleSave();
+    setEditingSection(null);
+  };
+
+  const isSectionEditing = (section) => isEditing || editingSection === section;
+
+  const sectionActions = (section) => (
+    editingSection === section ? (
+      <div className="section-edit-actions">
+        <button type="button" className="secondary-button" onClick={handleCancelEditing}>Cancel</button>
+        <button type="button" className="primary-button" onClick={handleSaveSection} disabled={saving}>
+          {saving ? 'Saving...' : 'Save Changes'}
+        </button>
+      </div>
+    ) : (
+      <button type="button" className="secondary-button section-edit-button" onClick={() => handleStartSectionEditing(section)}>
+        Edit Details
+      </button>
+    )
+  );
+
   const handleSave = async () => {
     setSaving(true);
     try {
       await studentService.updateStudentProfile({
+        name: profile.name,
+        email: profile.email,
         college_name: profile.college,
         branch: profile.branch,
         course: profile.branch,
@@ -60,10 +195,20 @@ export default function StudentProfile() {
         skills: profile.skills,
         phone: profile.phone,
       });
+      window.localStorage.setItem('internpulse_profile', JSON.stringify(profile));
+      window.localStorage.setItem('internpulse_user', JSON.stringify({
+        ...JSON.parse(window.localStorage.getItem('internpulse_user') || '{}'),
+        name: profile.name,
+        email: profile.email,
+      }));
+      window.localStorage.setItem('internpulse_profile_preferences', JSON.stringify(preferences));
+      window.localStorage.setItem('internpulse_profile_projects', JSON.stringify(projects));
+      window.localStorage.setItem('internpulse_profile_skill_levels', JSON.stringify(skillLevels));
+      setProfileBeforeEdit(null);
       setIsEditing(false);
-      alert('Profile updated and saved to database successfully!');
+      setSaveMessage('Profile saved successfully. Recommendations will use your updated skills.');
     } catch (err) {
-      alert('Failed to save profile: ' + (err.message || 'Error occurred'));
+      setSaveMessage('Failed to save profile: ' + (err.message || 'Error occurred'));
     } finally {
       setSaving(false);
     }
@@ -82,15 +227,15 @@ export default function StudentProfile() {
         {!isEditing ? (
           <button
             className="primary-button"
-            onClick={() => setIsEditing(true)}
+            onClick={handleStartEditing}
           >
-            Edit Profile
+            Edit Details
           </button>
         ) : (
           <div className="profile-actions">
             <button
               className="secondary-button"
-              onClick={() => setIsEditing(false)}
+              onClick={handleCancelEditing}
             >
               Cancel
             </button>
@@ -115,29 +260,52 @@ export default function StudentProfile() {
         <div className="profile-heading">
           <h3>{profile.name}</h3>
           <p>{profile.branch}</p>
+          <div className="profile-header-meta">
+            <span>{profile.location}</span>
+            <span>Student ID: {profile.studentId}</span>
+          </div>
           <span className="profile-status">Active Student</span>
         </div>
 
         <div className="profile-completeness">
           <div className="completeness-top">
             <span>Profile Completeness</span>
-            <strong>88%</strong>
+            <strong>{profileCompleteness}%</strong>
           </div>
 
           <div className="progress-track">
             <div
               className="progress-fill"
-              style={{ width: '88%' }}
+              style={{ width: `${profileCompleteness}%` }}
             />
           </div>
         </div>
       </div>
+
+      <nav className="profile-tabs" aria-label="Student profile sections">
+        {['Overview', 'Personal Info', 'Academic', 'Skills', 'Projects', 'Portfolio', 'Resume', 'Preferences'].map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            className={tab === 'Overview' ? 'active' : ''}
+            onClick={() => tab === 'Resume' ? setActiveTab('resume') : setIsEditing(tab === 'Personal Info' || tab === 'Academic' || tab === 'Skills' || tab === 'Preferences')}
+          >
+            {tab}
+          </button>
+        ))}
+      </nav>
+
+      {saveMessage && <div className="alert" role="status">{saveMessage}</div>}
+
+      <div className="profile-dashboard-grid">
+        <div>
 
       {/* Personal Information */}
       <div className="profile-section">
         <div className="section-title">
           <h3>Personal Information</h3>
           <p>Your basic contact information</p>
+          {sectionActions('personal')}
         </div>
 
         <div className="profile-grid">
@@ -148,7 +316,7 @@ export default function StudentProfile() {
               name="name"
               value={profile.name}
               onChange={handleChange}
-              disabled={!isEditing}
+              disabled={!isSectionEditing('personal')}
             />
           </div>
 
@@ -159,7 +327,7 @@ export default function StudentProfile() {
               name="email"
               value={profile.email}
               onChange={handleChange}
-              disabled={!isEditing}
+              disabled={!isSectionEditing('personal')}
             />
           </div>
 
@@ -170,7 +338,7 @@ export default function StudentProfile() {
               name="phone"
               value={profile.phone}
               onChange={handleChange}
-              disabled={!isEditing}
+              disabled={!isSectionEditing('personal')}
             />
           </div>
 
@@ -181,7 +349,7 @@ export default function StudentProfile() {
               name="location"
               value={profile.location}
               onChange={handleChange}
-              disabled={!isEditing}
+              disabled={!isSectionEditing('personal')}
             />
           </div>
         </div>
@@ -192,6 +360,7 @@ export default function StudentProfile() {
         <div className="section-title">
           <h3>Academic Information</h3>
           <p>Your current academic details</p>
+          {sectionActions('academic')}
         </div>
 
         <div className="profile-grid">
@@ -211,7 +380,7 @@ export default function StudentProfile() {
               name="branch"
               value={profile.branch}
               onChange={handleChange}
-              disabled={!isEditing}
+              disabled={!isSectionEditing('academic')}
             />
           </div>
 
@@ -222,7 +391,7 @@ export default function StudentProfile() {
               name="semester"
               value={profile.semester}
               onChange={handleChange}
-              disabled={!isEditing}
+              disabled={!isSectionEditing('academic')}
             />
           </div>
 
@@ -233,7 +402,7 @@ export default function StudentProfile() {
               name="college"
               value={profile.college}
               onChange={handleChange}
-              disabled={!isEditing}
+              disabled={!isSectionEditing('academic')}
             />
           </div>
         </div>
@@ -243,7 +412,8 @@ export default function StudentProfile() {
       <div className="profile-section">
         <div className="section-title">
           <h3>Skills</h3>
-          <p>Add your technical and professional skills</p>
+          <p>Add skills and set a proficiency level to improve recommendations.</p>
+          {sectionActions('skills')}
         </div>
 
         <div className="form-group">
@@ -252,22 +422,70 @@ export default function StudentProfile() {
             name="skills"
             value={profile.skills}
             onChange={handleChange}
-            disabled={!isEditing}
+            disabled={!isSectionEditing('skills')}
             rows="3"
             placeholder="Example: Python, Java, SQL, React"
           />
         </div>
 
         <div className="skills-preview">
-          {profile.skills
-            .split(',')
-            .map((skill) => skill.trim())
-            .filter(Boolean)
-            .map((skill) => (
-              <span className="skill-badge" key={skill}>
-                {skill}
-              </span>
-            ))}
+          {skillList.map((skill) => (
+            <div className="profile-skill-row" key={skill}>
+              <span className="skill-badge">{skill}</span>
+              <select
+                value={skillLevels[skill] || 'Intermediate'}
+                onChange={(event) => setSkillLevels((previous) => ({ ...previous, [skill]: event.target.value }))}
+                disabled={!isSectionEditing('skills')}
+                aria-label={`${skill} proficiency`}
+              >
+                <option>Beginner</option>
+                <option>Intermediate</option>
+                <option>Advanced</option>
+              </select>
+              <span className="skill-verification">Self-reported</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="profile-section">
+        <div className="section-title">
+          <h3>Career Preferences</h3>
+          <p>These preferences help rank internships that fit your goals.</p>
+          {sectionActions('preferences')}
+        </div>
+        <div className="profile-grid">
+          {[
+            ['targetRoles', 'Target Roles'],
+            ['workModes', 'Preferred Work Mode'],
+            ['preferredLocations', 'Preferred Locations'],
+            ['minimumStipend', 'Minimum Stipend'],
+            ['duration', 'Preferred Duration'],
+          ].map(([name, label]) => (
+            <div className="form-group" key={name}>
+              <label htmlFor={`preference-${name}`}>{label}</label>
+              <input id={`preference-${name}`} name={name} value={preferences[name] || ''} onChange={handlePreferenceChange} disabled={!isSectionEditing('preferences')} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="profile-section">
+        <div className="section-title">
+          <h3>Projects</h3>
+          <p>Project evidence gives the recommendation engine more context than skills alone.</p>
+          {sectionActions('projects')}
+        </div>
+        <div className="project-list">
+          {projects.map((project, index) => (
+            <div className="project-card" key={`${project.title}-${index}`}>
+              <input value={project.title} onChange={(event) => handleProjectChange(index, 'title', event.target.value)} disabled={!isSectionEditing('projects')} placeholder="Project title" aria-label="Project title" />
+              <textarea value={project.description} onChange={(event) => handleProjectChange(index, 'description', event.target.value)} disabled={!isSectionEditing('projects')} placeholder="What did you build?" rows="2" aria-label="Project description" />
+              <input value={project.skills} onChange={(event) => handleProjectChange(index, 'skills', event.target.value)} disabled={!isSectionEditing('projects')} placeholder="Skills used" aria-label="Project skills" />
+              <input type="url" value={project.url} onChange={(event) => handleProjectChange(index, 'url', event.target.value)} disabled={!isSectionEditing('projects')} placeholder="GitHub or demo URL" aria-label="Project URL" />
+            </div>
+          ))}
+          <button type="button" className="secondary-button" onClick={addProject}>+ Add Project</button>
         </div>
       </div>
 
@@ -276,6 +494,7 @@ export default function StudentProfile() {
         <div className="section-title">
           <h3>Portfolio & Professional Links</h3>
           <p>Connect your professional profiles</p>
+          {sectionActions('portfolio')}
         </div>
 
         <div className="profile-grid">
@@ -286,7 +505,7 @@ export default function StudentProfile() {
               name="github"
               value={profile.github}
               onChange={handleChange}
-              disabled={!isEditing}
+              disabled={!isSectionEditing('portfolio')}
             />
           </div>
 
@@ -297,7 +516,7 @@ export default function StudentProfile() {
               name="linkedin"
               value={profile.linkedin}
               onChange={handleChange}
-              disabled={!isEditing}
+              disabled={!isSectionEditing('portfolio')}
             />
           </div>
 
@@ -308,7 +527,7 @@ export default function StudentProfile() {
               name="portfolio"
               value={profile.portfolio}
               onChange={handleChange}
-              disabled={!isEditing}
+              disabled={!isSectionEditing('portfolio')}
             />
           </div>
         </div>
@@ -322,18 +541,54 @@ export default function StudentProfile() {
         </div>
 
         <div className="document-card">
-          <div>
+          <div className="document-icon" aria-hidden="true">
+            <IconFileText size={22} />
+          </div>
+          <div className="document-info">
             <strong>Student Resume</strong>
             <p>Resume available for internship applications</p>
           </div>
 
           <button
             className="secondary-button"
-            onClick={() => alert('Resume Builder opened')}
+            onClick={() => setActiveTab('resume')}
           >
-            Open Resume Builder
+            Open Resume
           </button>
         </div>
+      </div>
+        </div>
+
+        <aside className="profile-sidebar">
+          <div className="profile-insight-card">
+            <h3>AI Career Profile</h3>
+            <p>Readiness is based on the information currently in your profile.</p>
+            <div className="readiness-score">{profileCompleteness}%</div>
+            <div className="progress-track"><div className="progress-fill" style={{ width: `${profileCompleteness}%` }} /></div>
+            <div className="insight-metrics">
+              <span>Skills <strong>{skillList.length ? 'Strong' : 'Add skills'}</strong></span>
+              <span>Projects <strong>{projects.length}</strong></span>
+              <span>Preferences <strong>{profileChecks.preferences ? 'Set' : 'Missing'}</strong></span>
+            </div>
+            <button type="button" className="secondary-button" onClick={() => setActiveTab('recommendations')}>
+              View AI Analysis
+            </button>
+          </div>
+
+          <div className="profile-insight-card">
+            <h3>Profile Checklist</h3>
+            {Object.entries({
+              personal: 'Personal information', academic: 'Academic details', skills: 'Skills', projects: 'Projects', resume: 'Resume', preferences: 'Career preferences', portfolio: 'Professional links',
+            }).map(([key, label]) => (
+              <div className="checklist-row" key={key}><span>{profileChecks[key] ? '✓' : '○'}</span>{label}</div>
+            ))}
+          </div>
+
+          <div className="profile-insight-card">
+            <h3>Next Best Action</h3>
+            <p>{!profileChecks.projects ? 'Add a project with measurable outcomes.' : !profileChecks.preferences ? 'Set target roles and work modes.' : 'Add a verified skill or improve your resume.'}</p>
+          </div>
+        </aside>
       </div>
     </div>
   );

@@ -8,12 +8,76 @@
 // exchange public keys through Module 1's user profile endpoints.
 
 const keyCache = new Map(); // conversationId -> CryptoKey
+const keyStoragePrefix = 'internpulse_e2e_key_';
+const keyDbName = 'internpulse_crypto';
+const keyStoreName = 'keys';
+
+function dispatchKeyWarning(reason, metadata = {}) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('internpulse-key-warning', {
+    detail: { reason, ...metadata },
+  }));
+}
+
+async function openKeyDatabase() {
+  return new Promise((resolve, reject) => {
+    if (!('indexedDB' in window)) {
+      reject(new Error('IndexedDB is unavailable in this browser'));
+      return;
+    }
+
+    const request = window.indexedDB.open(keyDbName, 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(keyStoreName)) {
+        db.createObjectStore(keyStoreName, { keyPath: 'userId' });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('Unable to open key database'));
+  });
+}
+
+async function getStoredIdentityKey(currentUserId) {
+  try {
+    const db = await openKeyDatabase();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(keyStoreName, 'readonly');
+      const request = tx.objectStore(keyStoreName).get(String(currentUserId));
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error || new Error('Unable to read stored identity key'));
+    });
+  } catch {
+    return null;
+  }
+}
+
+async function storeIdentityKey(currentUserId, keyPair) {
+  const db = await openKeyDatabase();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(keyStoreName, 'readwrite');
+    const request = tx.objectStore(keyStoreName).put({
+      userId: String(currentUserId),
+      privateKey: keyPair.privateKey,
+      publicKey: keyPair.publicKey,
+    });
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error || new Error('Unable to store identity key'));
+  });
+}
+
+async function importLegacyKeyPair(jwkPayload) {
+  return {
+    privateKey: await crypto.subtle.importKey('jwk', jwkPayload.privateKey, { name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']),
+    publicKey: await crypto.subtle.importKey('jwk', jwkPayload.publicKey, { name: 'ECDH', namedCurve: 'P-256' }, true, []),
+  };
+}
 
 export async function generateKeyPair() {
   return crypto.subtle.generateKey(
     { name: 'ECDH', namedCurve: 'P-256' },
     true,
-    ['deriveKey']
+    ['deriveBits']
   );
 }
 
@@ -29,15 +93,61 @@ export async function importPublicKey(base64Key) {
 
 // Derives a shared AES-GCM key from my private key + their public key
 export async function deriveConversationKey(conversationId, myPrivateKey, theirPublicKey) {
-  const key = await crypto.subtle.deriveKey(
+  const sharedSecret = await crypto.subtle.deriveBits(
     { name: 'ECDH', public: theirPublicKey },
     myPrivateKey,
+    256,
+  );
+  const hkdfKey = await crypto.subtle.importKey('raw', sharedSecret, 'HKDF', false, ['deriveKey']);
+  const context = new TextEncoder().encode(`InternPulse conversation ${conversationId}`);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'HKDF', hash: 'SHA-256', salt: context, info: context },
+    hkdfKey,
     { name: 'AES-GCM', length: 256 },
     false,
-    ['encrypt', 'decrypt']
+    ['encrypt', 'decrypt'],
   );
   keyCache.set(conversationId, key);
   return key;
+}
+
+export async function ensureIdentityKey(currentUserId, registerKey) {
+  let keyPair = await getStoredIdentityKey(currentUserId);
+  const legacy = localStorage.getItem(`${keyStoragePrefix}${currentUserId}`);
+
+  if (!keyPair && legacy) {
+    try {
+      const jwk = JSON.parse(legacy);
+      keyPair = await importLegacyKeyPair(jwk);
+      await storeIdentityKey(currentUserId, keyPair);
+      localStorage.removeItem(`${keyStoragePrefix}${currentUserId}`);
+      dispatchKeyWarning('legacy-key-migrated', { userId: currentUserId });
+    } catch {
+      localStorage.removeItem(`${keyStoragePrefix}${currentUserId}`);
+    }
+  }
+
+  if (!keyPair) {
+    keyPair = await generateKeyPair();
+    await storeIdentityKey(currentUserId, keyPair);
+  }
+
+  const publicKey = await exportPublicKey(keyPair.publicKey);
+  await registerKey('ECDH-P256', publicKey);
+
+  if (legacy && !keyPair?.legacyMigrated) {
+    dispatchKeyWarning('identity-key-rotated', { userId: currentUserId, keyFingerprint: publicKey.slice(0, 16) });
+  }
+
+  return keyPair;
+}
+
+export async function ensureConversationKey(conversationId, participantKeys, currentUserId, registerKey) {
+  const keyPair = await ensureIdentityKey(currentUserId, registerKey);
+  const peers = participantKeys.filter((key) => String(key.userId) !== String(currentUserId));
+  if (!peers.length || !peers[0].publicKey) throw new Error('Recipient encryption key is not available yet');
+  const theirPublicKey = await importPublicKey(peers[0].publicKey);
+  return deriveConversationKey(conversationId, keyPair.privateKey, theirPublicKey);
 }
 
 export async function encryptMessage(conversationId, plaintext) {

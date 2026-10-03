@@ -1,24 +1,50 @@
 import { useState } from 'react';
 import { IconFileText } from '../../components/common/Icons';
+import { demoStudentProfile, demoStudentProjects, demoStudentResume } from '../../data/demoStudentProfile';
 
 export default function ResumeBuilder() {
   const [isEditing, setIsEditing] = useState(false);
 
-  const [resume, setResume] = useState({
-    name: 'Bhakti Shrikant Kadam',
-    email: 'bhakti@example.com',
-    phone: '+91 98765 43210',
-    careerObjective:
-      'B.Tech CSE-AIML student interested in software development, machine learning and data-driven applications.',
-    education:
-      'B.Tech CSE - AIML, Kolhapur Institute of Technology',
-    skills: 'Python, Java, Machine Learning, React, SQL',
-    projects:
-      'CyberEye - AI-driven threat detection platform',
-    experience:
-      'Academic projects and internship preparation',
-    achievements:
-      'Participated in technical projects and hackathons',
+  const localUser = (() => {
+    try {
+      return JSON.parse(window.localStorage.getItem('internpulse_user') || '{}');
+    } catch {
+      return {};
+    }
+  })();
+  const savedProfile = (() => {
+    try {
+      return { ...demoStudentProfile, ...JSON.parse(window.localStorage.getItem('internpulse_profile') || '{}') };
+    } catch {
+      return demoStudentProfile;
+    }
+  })();
+  const savedProjects = (() => {
+    try {
+      return JSON.parse(window.localStorage.getItem('internpulse_profile_projects')) || demoStudentProjects;
+    } catch {
+      return demoStudentProjects;
+    }
+  })();
+
+  const defaultResume = {
+    ...demoStudentResume,
+    name: savedProfile.name || localUser.name || 'Student Name',
+    email: savedProfile.email || localUser.email || '',
+    phone: savedProfile.phone || '',
+    education: `${savedProfile.course || 'B.Tech'} ${savedProfile.branch ? `- ${savedProfile.branch}` : ''}\n${savedProfile.college || 'Add your college or institution'} | GPA: ${savedProfile.gpa || '3.78 / 4.00'}`,
+    skills: savedProfile.skills || '',
+    projects: savedProjects.map((project) => `${project.title}: ${project.description}`).filter(Boolean).join('\n') || '',
+    experience: '',
+    achievements: '',
+  };
+
+  const [resume, setResume] = useState(() => {
+    try {
+      return { ...defaultResume, ...JSON.parse(window.localStorage.getItem('internpulse_resume') || '{}') };
+    } catch {
+      return defaultResume;
+    }
   });
 
   const handleChange = (e) => {
@@ -31,12 +57,20 @@ export default function ResumeBuilder() {
   };
 
   const handleSave = () => {
+    window.localStorage.setItem('internpulse_resume', JSON.stringify(resume));
     setIsEditing(false);
     alert('Resume details saved successfully!');
   };
 
   const handleDownload = () => {
-    alert('Resume PDF generation started.');
+    const content = `${resume.name}\n${resume.email} | ${resume.phone}\n\nCareer Objective\n${resume.careerObjective}\n\nEducation\n${resume.education}\n\nTechnical Skills\n${resume.skills}\n\nProjects\n${resume.projects}\n\nExperience\n${resume.experience}\n\nAchievements\n${resume.achievements}`;
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${resume.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-resume.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   return (

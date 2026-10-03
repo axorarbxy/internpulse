@@ -7,9 +7,10 @@ COPY module2/frontend/package*.json ./module2/frontend/
 WORKDIR /app/module2/frontend
 RUN npm ci
 
-# Copy sources for both frontend and Module-04 frontend dependencies
+# Copy sources for the shared frontend modules used by the app
 WORKDIR /app
 COPY Module-04/frontend/ ./Module-04/frontend/
+COPY sign-in/frontend/ ./sign-in/frontend/
 COPY module2/frontend/ ./module2/frontend/
 
 WORKDIR /app/module2/frontend
@@ -24,6 +25,6 @@ COPY module2/frontend/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost/health || exit 1
+  CMD wget --quiet --tries=1 --spider http://127.0.0.1/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]

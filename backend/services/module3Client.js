@@ -5,11 +5,16 @@ const serviceUrls = {
   feedback: process.env.FEEDBACK_API_URL || 'http://localhost:8004',
   fraud: process.env.FRAUD_API_URL || 'http://localhost:8005'
 };
+const internalServiceKey = process.env.CORE_SERVICE_KEY || process.env.INTERNAL_SERVICE_KEY || '';
 
 async function request(service, path, options = {}) {
   const response = await fetch(`${serviceUrls[service]}${path}`, {
     ...options,
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
+    headers: {
+      'Content-Type': 'application/json',
+      ...(internalServiceKey ? { 'X-Internal-Service-Key': internalServiceKey } : {}),
+      ...(options.headers || {}),
+    }
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {

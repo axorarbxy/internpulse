@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   BarChart,
   Bar,
@@ -14,38 +15,51 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { IconAnalytics } from '../../components/common/Icons';
-
-const placementData = [
-  { year: '2022', placement: 72 },
-  { year: '2023', placement: 78 },
-  { year: '2024', placement: 82 },
-  { year: '2025', placement: 87 },
-  { year: '2026', placement: 91 },
-];
-
-const departmentData = [
-  { department: 'CSE-AIML', students: 320, placed: 292 },
-  { department: 'Computer', students: 285, placed: 251 },
-  { department: 'Mechanical', students: 240, placed: 198 },
-  { department: 'E&TC', students: 215, placed: 184 },
-];
-
-const internshipStatusData = [
-  { name: 'Completed', value: 58 },
-  { name: 'In Progress', value: 31 },
-  { name: 'Pending', value: 11 },
-];
-
-const satisfactionData = [
-  { category: 'Technical Skills', score: 88 },
-  { category: 'Communication', score: 84 },
-  { category: 'Professionalism', score: 91 },
-  { category: 'Problem Solving', score: 86 },
-];
+import institutionService from '../../services/institutionService';
 
 export default function InstitutionAnalytics() {
+  const [overview, setOverview] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let isActive = true;
+    institutionService.getOverview()
+      .then((data) => { if (isActive) setOverview(data); })
+      .catch((requestError) => { if (isActive) setError(requestError.message || 'Unable to load institution analytics.'); })
+      .finally(() => { if (isActive) setLoading(false); });
+    return () => { isActive = false; };
+  }, []);
+
+  const downloadReport = (title) => {
+    if (!overview) return;
+    const rows = [
+      ['Institution', overview.institution?.institution_name || 'Institution'],
+      ['Report', title],
+      ['Students', overview.summary.totalStudents],
+      ['Placed students', overview.summary.studentsPlaced],
+      ['Active internships', overview.summary.activeInternships],
+      ['Industry partners', overview.summary.industryPartners],
+      [],
+      ['Student', 'Program', 'Internship', 'Company', 'Status', 'Progress'],
+      ...overview.students.map((student) => [student.name, student.branch || student.course, student.internship_title || '', student.company_name || '', student.application_status, `${student.progress}%`]),
+    ];
+    const csv = rows.map((row) => row.map((value) => `"${String(value ?? '').replaceAll('"', '""')}"`).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${title.toLowerCase().replaceAll(/[^a-z0-9]+/g, '-')}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  if (loading) return <div className="loading-container" role="status"><div className="spinner" /><p>Loading institutional analytics...</p></div>;
+  if (!overview) return <div className="alert alert-danger" role="alert">{error || 'Institution analytics are unavailable.'}</div>;
+
+  const { summary, departments, monthlyApplications, internshipStatus, evaluations } = overview;
+
   return (
-    <div className="page-container institution-analytics">
+    <div className="page-container institution-dashboard institution-analytics">
       <div className="page-header">
         <div>
           <h2>Institution Analytics</h2>
@@ -63,7 +77,7 @@ export default function InstitutionAnalytics() {
         </div>
 
         <div className="profile-heading">
-          <h3>Institutional Intelligence & Reports</h3>
+            <h3>{overview.institution?.institution_name || 'Institutional Intelligence & Reports'}</h3>
           <p>
             Analyze placement performance, internship outcomes and employer
             feedback.
@@ -76,50 +90,55 @@ export default function InstitutionAnalytics() {
       <div className="stats-grid">
         <div className="stat-card">
           <span className="stat-label">Placement Rate</span>
-          <strong className="stat-value">91%</strong>
-          <span className="stat-subtitle">Current academic year</span>
+          <strong className="stat-value">{summary.placementRate}%</strong>
+          <span className="stat-subtitle">Active or completed placements</span>
         </div>
 
         <div className="stat-card">
           <span className="stat-label">Internship Completion</span>
-          <strong className="stat-value">89%</strong>
+          <strong className="stat-value">{summary.completionRate}%</strong>
           <span className="stat-subtitle">Across all departments</span>
         </div>
 
         <div className="stat-card">
-          <span className="stat-label">Employer Satisfaction</span>
-          <strong className="stat-value">87%</strong>
-          <span className="stat-subtitle">Based on feedback</span>
+          <span className="stat-label">Evaluation Score</span>
+          <strong className="stat-value">{summary.employerSatisfaction}%</strong>
+          <span className="stat-subtitle">Current supervisor evaluations</span>
         </div>
 
         <div className="stat-card">
           <span className="stat-label">Industry Partners</span>
-          <strong className="stat-value">74</strong>
-          <span className="stat-subtitle">Active organizations</span>
+          <strong className="stat-value">{summary.industryPartners}</strong>
+          <span className="stat-subtitle">Represented in this cohort</span>
         </div>
       </div>
 
+      <div className="analytics-chart-grid">
       {/* Placement Trend */}
       <div className="profile-section">
         <div className="section-title">
-          <h3>Placement Trend</h3>
-          <p>Placement percentage over recent academic years</p>
+          <h3>Application Activity</h3>
+          <p>Recent applications and active/completed placements</p>
         </div>
 
-        <div style={{ width: '100%', height: 320 }}>
+        <div className="analytics-chart analytics-chart-wide">
           <ResponsiveContainer>
-            <LineChart data={placementData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="year" />
-              <YAxis domain={[0, 100]} />
-              <Tooltip />
-              <Legend />
+            <LineChart data={monthlyApplications}>
+              <CartesianGrid stroke="#f8edbd" strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="month" tick={{ fill: '#5d7184', fontSize: 11 }} axisLine={{ stroke: '#e8ddb0' }} tickLine={false} />
+              <YAxis allowDecimals={false} tick={{ fill: '#5d7184', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ border: '1px solid #e8ddb0', borderRadius: 9, fontSize: 12 }} />
+              <Legend wrapperStyle={{ fontSize: 11, color: '#5d7184' }} />
               <Line
                 type="monotone"
-                dataKey="placement"
-                name="Placement %"
+                dataKey="applications"
+                name="Applications"
+                stroke="#0f3c65"
                 strokeWidth={3}
+                dot={{ r: 4, fill: '#ffffff', strokeWidth: 2, stroke: '#0f3c65' }}
+                activeDot={{ r: 6, fill: '#0f3c65' }}
               />
+              <Line type="monotone" dataKey="placed" name="Placed" stroke="#d18b49" strokeWidth={2} dot={{ r: 3 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -129,19 +148,19 @@ export default function InstitutionAnalytics() {
       <div className="profile-section">
         <div className="section-title">
           <h3>Department Placement Comparison</h3>
-          <p>Students versus placed students by department</p>
+          <p>Assigned students and active/completed internships by program</p>
         </div>
 
-        <div style={{ width: '100%', height: 340 }}>
+        <div className="analytics-chart">
           <ResponsiveContainer>
-            <BarChart data={departmentData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="department" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="students" name="Total Students" />
-              <Bar dataKey="placed" name="Placed Students" />
+            <BarChart data={departments}>
+              <CartesianGrid stroke="#f8edbd" strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="department" tick={{ fill: '#5d7184', fontSize: 10 }} axisLine={{ stroke: '#e8ddb0' }} tickLine={false} />
+              <YAxis tick={{ fill: '#5d7184', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ border: '1px solid #e8ddb0', borderRadius: 9, fontSize: 12 }} />
+              <Legend wrapperStyle={{ fontSize: 11, color: '#5d7184' }} />
+              <Bar dataKey="students" name="Total Students" fill="#90aaa1" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="internships" name="Active / Completed" fill="#245c84" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -151,28 +170,29 @@ export default function InstitutionAnalytics() {
       <div className="profile-section">
         <div className="section-title">
           <h3>Internship Status Distribution</h3>
-          <p>Current internship lifecycle status</p>
+          <p>Latest application status for assigned students</p>
         </div>
 
-        <div style={{ width: '100%', height: 320 }}>
+        <div className="analytics-chart analytics-chart-pie">
           <ResponsiveContainer>
             <PieChart>
               <Pie
-                data={internshipStatusData}
+                data={internshipStatus}
                 dataKey="value"
                 nameKey="name"
                 cx="50%"
                 cy="50%"
-                outerRadius={100}
-                label
+                outerRadius={88}
+                paddingAngle={3}
+                label={{ fill: '#365570', fontSize: 10 }}
               >
-                {internshipStatusData.map((entry) => (
-                  <Cell key={entry.name} />
+                {internshipStatus.map((entry) => (
+                  <Cell key={entry.name} fill={entry.color} />
                 ))}
               </Pie>
 
-              <Tooltip />
-              <Legend />
+              <Tooltip contentStyle={{ border: '1px solid #e8ddb0', borderRadius: 9, fontSize: 12 }} />
+              <Legend wrapperStyle={{ fontSize: 11, color: '#5d7184' }} />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -181,39 +201,48 @@ export default function InstitutionAnalytics() {
       {/* Employer Satisfaction */}
       <div className="profile-section">
         <div className="section-title">
-          <h3>Employer Satisfaction</h3>
-          <p>Employer feedback across key student competencies</p>
+          <h3>Supervisor Evaluation Distribution</h3>
+          <p>Evaluation levels recorded for active internship progress</p>
         </div>
 
-        <div style={{ width: '100%', height: 340 }}>
+        <div className="analytics-chart">
           <ResponsiveContainer>
             <BarChart
-              data={satisfactionData}
+              data={evaluations}
               layout="vertical"
-              margin={{ left: 30 }}
+              margin={{ left: 8, right: 12 }}
             >
-              <CartesianGrid strokeDasharray="3 3" />
+              <CartesianGrid stroke="#f8edbd" strokeDasharray="3 3" horizontal={false} />
 
               <XAxis
                 type="number"
-                domain={[0, 100]}
+                allowDecimals={false}
+                tick={{ fill: '#5d7184', fontSize: 10 }}
+                axisLine={{ stroke: '#e8ddb0' }}
+                tickLine={false}
               />
 
               <YAxis
                 type="category"
                 dataKey="category"
-                width={130}
+                width={116}
+                tick={{ fill: '#49647a', fontSize: 10 }}
+                axisLine={false}
+                tickLine={false}
               />
 
-              <Tooltip />
+              <Tooltip contentStyle={{ border: '1px solid #e8ddb0', borderRadius: 9, fontSize: 12 }} />
 
               <Bar
-                dataKey="score"
-                name="Satisfaction %"
+                dataKey="count"
+                name="Students"
+                fill="#d18b49"
+                radius={[0, 5, 5, 0]}
               />
             </BarChart>
           </ResponsiveContainer>
         </div>
+      </div>
       </div>
 
       {/* Reports */}
@@ -232,7 +261,7 @@ export default function InstitutionAnalytics() {
               <p>Placement performance and department-wise statistics</p>
             </div>
 
-            <button className="secondary-button">
+              <button className="secondary-button" onClick={() => downloadReport('Annual Placement Report')}>
               View Report
             </button>
           </div>
@@ -245,7 +274,7 @@ export default function InstitutionAnalytics() {
               <p>Internship completion and student performance</p>
             </div>
 
-            <button className="secondary-button">
+              <button className="secondary-button" onClick={() => downloadReport('Internship Outcome Report')}>
               View Report
             </button>
           </div>
@@ -258,7 +287,7 @@ export default function InstitutionAnalytics() {
               <p>Industry partner satisfaction and feedback</p>
             </div>
 
-            <button className="secondary-button">
+              <button className="secondary-button" onClick={() => downloadReport('Supervisor Evaluation Report')}>
               View Report
             </button>
           </div>

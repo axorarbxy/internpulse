@@ -1,4 +1,8 @@
+import hmac
+import os
+
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import JSONResponse
 
 from app.models.schemas import (
     Grievance,
@@ -14,6 +18,19 @@ app = FastAPI(
     version="1.0.0",
     description="Triage, draft resolution, route, and track student grievances.",
 )
+service_key = os.getenv("CORE_SERVICE_KEY", "").strip()
+
+
+@app.middleware("http")
+async def require_internal_service_key(request, call_next):
+    if request.url.path == "/health" or not service_key:
+        return await call_next(request)
+    supplied_key = request.headers.get("X-Internal-Service-Key", "")
+    if not hmac.compare_digest(supplied_key, service_key):
+        return JSONResponse(status_code=401, content={"detail": "Service authentication required"})
+    return await call_next(request)
+
+
 manager = GrievanceManager()
 
 

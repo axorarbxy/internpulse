@@ -1,6 +1,8 @@
 // INTERNAL MODULE 4 FUNCTIONALITY — provides a shared authenticated socket
 import { createContext, useContext, useEffect, useState } from 'react';
 import { connectSocket, disconnectSocket } from '../services/socket';
+import { keysApi } from '../services/api';
+import { ensureIdentityKey } from '../utils/crypto';
 
 const SocketContext = createContext(null);
 
@@ -10,6 +12,8 @@ export function SocketProvider({ token, children }) {
 
   useEffect(() => {
     if (!token) return undefined;
+    const currentUser = JSON.parse(localStorage.getItem('internpulse_user') || '{}');
+    if (currentUser.id) ensureIdentityKey(String(currentUser.id), keysApi.register).catch(() => {});
     const s = connectSocket(token);
     setSocket(s);
 

@@ -52,10 +52,16 @@ export function useNotifications() {
 
   const markRead = useCallback(async (id) => {
     await notificationsApi.markRead(id);
+    setNotifications((previous) => previous.map((notification) => (
+      (notification.id || notification._id) === id ? { ...notification, isRead: true } : notification
+    )));
+    setUnreadCount((count) => Math.max(0, count - 1));
   }, []);
 
   const markAllRead = useCallback(async () => {
     await notificationsApi.markAllRead();
+    setNotifications((previous) => previous.map((notification) => ({ ...notification, isRead: true })));
+    setUnreadCount(0);
   }, []);
 
   return { notifications, unreadCount, loading, markRead, markAllRead, refresh };

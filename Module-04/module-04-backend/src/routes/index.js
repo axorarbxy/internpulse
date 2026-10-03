@@ -4,6 +4,7 @@ const conversations = require('./conversations');
 const messages = require('./messages');
 const certificates = require('./certificates');
 const documentVerifications = require('./documentVerifications');
+const keys = require('./keys');
 
 const router = express.Router();
 
@@ -12,5 +13,6 @@ router.use('/conversations', conversations);
 router.use('/messages', messages);
 router.use('/certificates', certificates);
 router.use('/document-verifications', documentVerifications);
+router.use('/keys', keys);
 
 module.exports = router;

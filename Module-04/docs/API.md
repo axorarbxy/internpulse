@@ -38,6 +38,13 @@ between the same participants if one exists.
 ### GET /api/conversations
 Lists conversations the authenticated user participates in.
 
+### GET /api/conversations/contacts
+Lists portal users available for a new conversation, excluding the caller.
+
+### GET /api/conversations/:id/keys
+Returns participant public ECDH keys for an authorized conversation. Private keys
+never leave the browser.
+
 ### GET /api/conversations/:id/messages
 Query: `page`, `limit` (max 200). 403 `FORBIDDEN` if the user is not a participant.
 Returns `ciphertext` + `iv` only — decrypt client-side.
@@ -45,6 +52,10 @@ Returns `ciphertext` + `iv` only — decrypt client-side.
 ### POST /api/conversations/:id/messages
 Body: `{ ciphertext: string, iv: string }` (both already encrypted client-side).
 Rate limited to 30/minute per client. 403 if not a participant.
+
+If a recipient has not opened a portal session yet, the sender keeps the
+plaintext only in the sender's browser queue until the recipient public key is
+available; the server still receives ciphertext only.
 
 ### PATCH /api/messages/:id/read
 Marks a message as read by the authenticated user.
@@ -55,9 +66,15 @@ Marks a message as read by the authenticated user.
 
 ### POST /api/certificates
 Roles: `COMPANY`, `ADMIN`
-Body: `{ internshipId: string }`
-Fetches authoritative data from Module 1, generates hash + signature + QR,
-persists the certificate, notifies the student.
+Body: `{ applicationId: string }`
+Requires a completed application owned by the company (admins may issue for any
+completed application). Fetches the authoritative snapshot from Module 1,
+generates a hash + signature + QR, persists one certificate per application,
+and notifies the student. Open review flags block issuance when the fraud gate
+is configured to enforce review.
+
+### GET /api/certificates/my
+Role: `STUDENT`. Lists the authenticated student's signed certificates.
 
 ### GET /api/certificates/:id
 Roles: student/company on the certificate, `ADMIN`, `INSTITUTE`.
@@ -68,15 +85,21 @@ Streams a generated PDF (professional layout + embedded QR code).
 ### GET /api/certificates/verify/:certificateId
 **Public — no authentication.** Recomputes the hash, checks the signature,
 checks revocation status. Returns only non-sensitive fields (see SECURITY.md).
+The QR opens the main application at `/#/verify/:certificateId`.
 
 ---
 
 ## Document Verifications
 
 ### POST /api/document-verifications
-Roles: `ADMIN`, `INSTITUTE` (intended real caller: Module 3's service identity)
+Internal service key required (Module 3 publishes AI findings; they remain advisory).
 Body: `{ documentId, internshipId?, status, verificationScore?, reason?, verifiedBy? }`
 `status` must be one of `PENDING | UNDER_REVIEW | VERIFIED | REJECTED | FLAGGED`.
+
+### POST /api/document-verifications/resolution
+Internal service key required. The fraud service synchronizes an authenticated
+human review outcome by `flagId`; `VERIFIED` clears the certificate gate and
+`REJECTED` keeps it blocked.
 
 ### GET /api/document-verifications/:documentId
 Returns the stored verification record for a document.
