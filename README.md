@@ -4,11 +4,12 @@ Complete PostgreSQL + Node.js/Express backend for Module 1.
 
 Features: registration/login, bcrypt password hashing, JWT authentication, RBAC, student/company/institution profiles, internship CRUD, applications and status lifecycle, certificates and verification.
 
-<img width="1891" height="860" alt="image" src="https://github.com/user-attachments/assets/39ccb453-4d76-4bad-b841-502f0272b094" />
+<img width="1897" height="865" alt="image" src="https://github.com/user-attachments/assets/6579d439-0d38-48b6-b05d-3384659bbe76" />
 
-<img width="1897" height="852" alt="image" src="https://github.com/user-attachments/assets/79f21aae-8e47-4d71-bd38-445951714c5f" />
+<img width="1890" height="861" alt="image" src="https://github.com/user-attachments/assets/a3863554-4a9d-49a4-a6a8-8ff559600461" />
 
-<img width="1895" height="862" alt="image" src="https://github.com/user-attachments/assets/e7f27bac-785a-47a8-96a0-94cb94f15676" />
+<img width="1542" height="857" alt="image" src="https://github.com/user-attachments/assets/5cb2b006-1de2-4a0f-80e2-a19697835a3e" />
+
 
 
 
