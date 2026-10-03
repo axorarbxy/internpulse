@@ -10,4 +10,4 @@ const poolConfig = process.env.DATABASE_URL
     };
 const pool=new Pool(poolConfig);
 pool.on('error',e=>console.error('PostgreSQL pool error:',e.message));
-module.exports=pool
+module.exports=pool;
